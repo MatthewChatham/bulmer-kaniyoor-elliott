@@ -5,3 +5,6 @@ gunicorn
 dash
 dash-bootstrap-components
 pandas
+dash-auth
+openpyxl
+psycopg2
