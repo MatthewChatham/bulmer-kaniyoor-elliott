@@ -64,6 +64,9 @@ def clean(df, numeric_cols):
                 df[c],
                 errors='coerce' # silently coerce non-numeric values to NaN
             )
+            
+    # todo: Standardize NaNs
+    # df = df.replace('.*not reported.*', np.NaN, regex=True)
 
     return {'data': df, 'dropped': dropped_cols}
 
