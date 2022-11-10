@@ -15,7 +15,7 @@ import psycopg2
 import psycopg2.extras as extras
 import os
 
-from src.common import clean, get_data_dict
+from src.common import clean, get_dd, update_database
 
 dash.register_page(__name__)
 
@@ -43,59 +43,7 @@ def parse_contents(contents):
 
     return df
 
-
-def update_database(df, data_dict):
-    """
     
-    Given a pandas DataFrame representing a data upload,
-    and a data_dict representing column types,
-    update the database accordingly.
-    
-    """
-    
-    # convert data_dict df to actual dict
-    data_dict = {r['colname']:r['coltype'] for i,r in data_dict.iterrows()}
-    
-    # fail if not all columns have types
-    assert set(df.columns).issubset(set(data_dict.keys()))
-    
-    cur = conn.cursor()
-    
-    # drop tables
-    for table_name in ['df', 'data_dict']:
-        cur.execute(f"DROP TABLE IF EXISTS {table_name};")
-
-    # create and insert into data_dict
-    cur.execute("""
-        CREATE TABLE data_dict(
-            colname text PRIMARY KEY,
-            coltype text NOT NULL
-        );
-    """)
-    qstring = "INSERT INTO data_dict VALUES %s"
-    extras.execute_values(cur, qstring, [(k,v) for k,v in data_dict.items()])
-    
-    # create df
-    colnames = df.columns
-    qstring = """CREATE TABLE df("""
-    to_join = []
-    for c in colnames:
-        to_join.append(f""""{c}" {'numeric' if data_dict[c] == 'numeric' else 'text'}""")
-    qstring += ',\n'.join(to_join)
-    qstring += ");"
-    cur.execute(qstring)
-    
-    # insert into df
-    qstring = "INSERT INTO df VALUES %s"
-    records = []
-    for i,r in df.iterrows():
-        records.append(tuple(r.values))
-    extras.execute_values(cur, qstring, records)
-    
-    # commit changes & close database
-    conn.commit()
-    cur.close()
-
 def check_credentials(username, password):
     return username == LOGIN_USERNAME and password == LOGIN_PASSWORD
 
@@ -227,17 +175,23 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
         df_raw = parse_contents(contents)
         
         with conn.cursor() as cur:
-            data_dict = get_data_dict(cur)
+            dd = get_dd(cur)
 
         cleaned_cols = [c for c in df_raw.columns if not 'Unnamed' in c and not c.endswith('.1')]
-        new_cols = not set(cleaned_cols).issubset(set(data_dict.colname))
+        new_cols = not set(cleaned_cols).issubset(set(dd.keys()))
 
         if not new_cols:
-            numeric_cols = data_dict.loc[data_dict.coltype == 'numeric', 'colname'].tolist()
+            numeric_cols = [k for k in dd if dd[k] == 'numeric']
+            
+            print('cleaning')
             clean_result = clean(df_raw, numeric_cols)
 
-            update_database(clean_result['data'], data_dict)
+            print('updating')
+            with conn.cursor() as cur:
+                update_database(cur, clean_result['data'], dd)
+                conn.commit()
 
+            print('prepping result')
             msg = f'''The following columns were dropped either because 
             they were unnamed or because their names are duplicates: 
             {clean_result["dropped"]}.'''
@@ -256,7 +210,7 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
             ]
 
         else:
-            new_colnames = set(cleaned_cols) - set(data_dict.colname)
+            new_colnames = set(cleaned_cols) - set(dd.keys())
             
             res_style = goto('checklist')
             res_children[2] = [
@@ -270,7 +224,7 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
         
         # add new column to dictionary
         with conn.cursor() as cur:
-            qstring = "INSERT INTO data_dict VALUES %s"
+            qstring = "INSERT INTO dd VALUES %s"
             extras.execute_values(cur, qstring, [(c, 'numeric' if c in numeric_cols else 'text') for c in new_colnames])
         
         res_style = goto('upload')

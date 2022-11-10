@@ -1,4 +1,7 @@
-from dash import Dash, dcc, html, Input, Output, State, page_container, callback
+from dash import (
+    Dash, dcc, html, Input, Output, State, 
+    page_container, callback, dash_table, ctx
+)
 import dash
 import os
 import pandas as pd
@@ -6,7 +9,7 @@ import numpy as np
 import plotly.express as px
 import dash_bootstrap_components as dbc
 import psycopg2
-from src.common import get_data_dict
+from src.common import get_dd, get_df, CATEGORY_MAPPER
 
 dash.register_page(__name__, path='/')
 
@@ -14,17 +17,23 @@ DATABASE_URL = os.environ['DATABASE_URL']
 conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
 
 
-# ------------------------------ CONSTANTS & STYLE ---------------------------------------
+# -------------------------- CONSTANTS & STYLE --------------------------------
 #
 #
-# ---------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
-CITATION =  "Bulmer, J. S., Kaniyoor, A., Elliott 2008432, J. A., A Meta-Analysis "
-"of Conductive and Strong Carbon Nanotube Materials. Adv. Mater. 2021, 33, 2008432. "
+CITATION = """
+Bulmer, J. S., Kaniyoor, A., Elliott 2008432, J. A., A Meta-Analysis
+of Conductive and Strong Carbon Nanotube Materials. Adv. Mater. 2021, 33,
+2008432.
+"""
 CITELINK = "https://doi.org/10.1002/adma.202008432"
 
-LOGO_URL = 'https://secureservercdn.net/45.40.155.190/svz.20f.myftpupload.com/wp-content/uploads/2022/03/Logo1-2-768x768.png'
+LOGO_URL = """
+https://secureservercdn.net/45.40.155.190/svz.20f.myftpupload.com/
+wp-content/uploads/2022/03/Logo1-2-768x768.png
+"""
 APP_NAME = 'CNT Meta-Analysis Explorer'
 
 SIDEBAR_STYLE = {
@@ -49,94 +58,19 @@ CONTENT_STYLE = {
 #
 # ---------------------------------------------------------------------------------------------
 
-
-filter_modal = html.Div(
-    style={'margin-top': '1rem'},
-    children =
-    [
-        dbc.Button("Adjust filters", id="open", n_clicks=0),
-        dbc.Modal(
-            [
-                dbc.ModalHeader(dbc.ModalTitle("Filters")),
-                dbc.ModalBody(children=html.Div(id='filter-fields')),
-                dbc.ModalFooter(
-                    dbc.Button(
-                        "Close", id="close", className="ms-auto", n_clicks=0
-                    )
-                ),
-            ],
-            id="filter-modal",
-            is_open=False,
-            fullscreen=True
-        ),
-    ]
-)
-
-sidebar = html.Div(
-    [
-        html.H2(APP_NAME, className="display-7"),
-        html.Hr(),
-        html.Div([
-            html.H6("Filter Field Picker"),
-            html.P("Select fields you want to filter on.", className="text-muted"),
-            html.P("To reset a filter, remove it from the list.", className='text-muted'),
-            html.Div(id='filter-field-picker-div'),
-            filter_modal,
-
-            html.Hr(),
-            html.H6('Legend'),
-            html.Div(id='legend-div'),
-
-            html.Hr(),
-            html.P('Doped or Acid Exposure (Yes/ No)'),
-            dcc.Checklist(['Yes', 'No'], ['Yes', 'No'], id='dope-control'),
-            html.Hr(),
-
-            dbc.Button("Update charts", id="update", n_clicks=0),
-        ])
-        
-    ],
-    style=SIDEBAR_STYLE,
-)
-
-graph1 = html.Div(
-    children=[
-        html.B("Boxplots"),
-        html.Hr(),
-        dcc.Dropdown([], '', multi=False, placeholder='Pick X-axis', id='graph1-xaxis-dropdown'),
-        dcc.Dropdown([], '', multi=False, placeholder='Pick Y-axis', id='graph1-yaxis-dropdown'),
-        dcc.Checklist(['Log Y'], [], id='graph1-log'),
-        html.Div(id='graph1', children=dcc.Graph()),
-    ]
-)
-
-graph2 = html.Div(
-    style={'margin-top': '1rem'},
-    children=[
-        html.B("Scatterplot"),
-        html.Hr(),
-        dcc.Dropdown([], '', multi=False, placeholder='Pick X-axis', id='graph2-xaxis-dropdown'),
-        dcc.Dropdown([], '', multi=False, placeholder='Pick Y-axis', id='graph2-yaxis-dropdown'),
-        dcc.Checklist(['Log X', 'Log Y'], ['Log X', 'Log Y'], id='graph2-log'),
-        html.Div(id='graph2', children=dcc.Graph()),
-    ]
-)
-
-content = html.Div(
-    id="page-content",
-    style=CONTENT_STYLE,
-    children=[graph1, graph2]
-)
-
 navbar = dbc.Navbar(
     dbc.Container(
         [
             html.A(
-                # Use row and col to control vertical alignment of logo / brand
                 dbc.Row(
                     [
                         dbc.Col(html.Img(src=LOGO_URL, height="30px")),
-                        dbc.Col(dbc.NavbarBrand("Idlewild Technologies", class_name="ms-2")),
+                        dbc.Col(
+                            dbc.NavbarBrand(
+                                "Idlewild Technologies", 
+                                class_name="ms-2"
+                            )
+                        ),
                     ],
                     # align="center",
                     className="g-0",
@@ -149,6 +83,180 @@ navbar = dbc.Navbar(
     color="#ffffff",
     fixed="top",
 )
+
+def serve_sidebar(df):
+    filter_modal = html.Div(
+        style={'margin-top': '1rem'},
+        children =
+        [
+            dbc.Button("Adjust filters", id="open", n_clicks=0),
+            dbc.Button("Reset filters", id="reset-filters", n_clicks=0),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Filters")),
+                    dbc.ModalBody(html.Div(id='filter-fields')),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Close", 
+                            id="close", 
+                            className="ms-auto", 
+                            n_clicks=0
+                        )
+                    ),
+                ],
+                id="filter-modal",
+                is_open=False,
+                fullscreen=True
+            ),
+        ]
+    )
+    
+    sidebar = html.Div(
+        [
+            html.H2(APP_NAME, className="display-7"),
+            html.Hr(),
+            html.Div([
+                html.H6("Filter Field Picker"),
+                html.P(
+                    "Select fields you want to filter on.", 
+                    className="text-muted"
+                ),
+                html.P(
+                    "To reset a filter, remove it from the list.", 
+                    className='text-muted'
+                ),
+                html.Div(
+                    id='filter-field-picker-div',
+                    children=dcc.Dropdown(
+                        [
+                            c for c in df.columns 
+                            if c not in 
+                            ['Category', 'Doped or Acid Exposure (Yes/ No)']
+                        ], 
+                        [], 
+                        multi=True, 
+                        placeholder='Pick filter fields', 
+                        id='filter-field-picker'
+                    )
+                ),
+                filter_modal,
+
+                html.Hr(),
+                html.H6('Legend'),
+                html.Div(
+                    id='legend-div',
+                    children=[
+                        dbc.Button(
+                            'Check/uncheck all', 
+                            id='legend-toggle-all'
+                        ),
+                        dcc.Checklist(
+                            df['Category'].unique(), 
+                            [
+                                c for c in CATEGORY_MAPPER.keys() 
+                                 if CATEGORY_MAPPER[c] != 'Other'
+                            ], 
+                            labelStyle={'display': 'block'},
+                            style={
+                                "height":300, 
+                                "width":350, 
+                                "overflow":"auto"
+                            }, 
+                            id='legend'
+                        )
+                    ]
+                ),
+
+                html.Hr(),
+                html.P('Doped or Acid Exposure (Yes/ No)'),
+                dcc.Checklist(
+                    ['Yes', 'No'], 
+                    ['Yes', 'No'], 
+                    id='dope-control'
+                ),
+                html.Hr(),
+
+                dbc.Button("Update charts", id="update", n_clicks=0),
+            ])
+
+        ],
+        style=SIDEBAR_STYLE,
+    )
+    
+    return sidebar
+
+def serve_content(df, dd):
+    numeric_cols = [c for c in df.columns if dd[c] == 'numeric']
+    categorical_cols = [c for c in df.columns if dd[c] != 'numeric']
+    
+    graph1 = html.Div(
+        children=[
+            html.B("Boxplots"),
+            html.Hr(),
+            dcc.Dropdown(
+                categorical_cols, 
+                'Category', 
+                multi=False, 
+                placeholder='Pick X-axis', 
+                id='graph1-xaxis-dropdown'
+            ),
+            dcc.Dropdown(
+                numeric_cols, 
+                'Conductivity (MSm-1)', 
+                multi=False, 
+                placeholder='Pick Y-axis', 
+                id='graph1-yaxis-dropdown'
+            ),
+            dcc.Checklist(
+                ['Log Y'], 
+                ['Log Y'], 
+                id='graph1-log'
+            ),
+            html.Div(
+                id='graph1', 
+                children=dcc.Graph()
+            ),
+        ]
+    )
+
+    graph2 = html.Div(
+        style={'margin-top': '1rem'},
+        children=[
+            html.B("Scatterplot"),
+            html.Hr(),
+            dcc.Dropdown(
+                numeric_cols, 
+                'Tensile Strength (MPa)', 
+                multi=False, 
+                placeholder='Pick X-axis', 
+                id='graph2-xaxis-dropdown'
+            ),
+            dcc.Dropdown(
+                numeric_cols, 
+                'Conductivity (MSm-1)', 
+                multi=False, 
+                placeholder='Pick Y-axis', 
+                id='graph2-yaxis-dropdown'
+            ),
+            dcc.Checklist(
+                ['Log X', 'Log Y'], 
+                ['Log X', 'Log Y'], 
+                id='graph2-log'
+            ),
+            html.Div(
+                id='graph2', 
+                children=dcc.Graph()
+            ),
+        ]
+    )
+
+    content = html.Div(
+        id="page-content",
+        style=CONTENT_STYLE,
+        children=[graph1, graph2]
+    )
+    
+    return content
 
 footer = dbc.Navbar(
     dbc.Container([
@@ -167,32 +275,48 @@ footer = dbc.Navbar(
 #
 # ---------------------------------------------------------------------------------------------
 
-# todo: replace callback DB calls with serve_layout func
-layout = dbc.Container([navbar, sidebar, content, footer, html.Div(id='placeholder')], className="bg-secondary")
+def serve_layout():
+    
+    with conn.cursor() as cur:
+        df = get_df(cur)
+        dd = get_dd(cur)
+    
+    # store the df in memory so callbacks don't need DB calls
+    store_df = dcc.Store(
+        id='df',
+        data=df.to_dict(),
+        storage_type='memory'
+    )
+
+    store_dd = dcc.Store(
+        id='dd',
+        data=dd,
+        storage_type='memory'
+    )
+    
+    return dbc.Container(
+        [
+            store_df,
+            store_dd,
+            navbar, 
+            serve_sidebar(df),
+            serve_content(df, dd),
+            footer,
+        ], 
+        className="bg-secondary"
+    )
+
+layout = serve_layout
+# layout = html.Div('test')
 
 
 # ------------------------------ HELPERS ------------------------------------------------------
 #
-# TODO: move some of these to a common file
+#
 # ---------------------------------------------------------------------------------------------
 
-def get_df(cur):
-    # get df column names
-    cur.execute("""
-    SELECT column_name
-      FROM information_schema.columns
-     WHERE table_schema = 'public'
-       AND table_name   = 'df'
-         ;
-    """)
-    cols = [x[0] for x in cur.fetchall()]
-    
-    cur.execute('select * from df;')
-    df = pd.DataFrame(cur.fetchall(), columns=cols)
 
-    return df
-
-def generate_filter_control(c, cur):
+def generate_filter_control(c, cur, df, dd):
     """
     Given a column name `c` and a cursor `cur`,
     generate an appropriate filter control based
@@ -201,12 +325,7 @@ def generate_filter_control(c, cur):
     
     res = None
     
-    data_dict = get_data_dict(cur)
-    df = get_df(cur)
-    
-    data_type = data_dict.loc[data_dict.colname == c, 'coltype'].values[0]
-    
-    if data_type == 'numeric':
+    if dd[c] == 'numeric':
         res = dcc.RangeSlider(
             df[c].astype(float).min(), 
             df[c].astype(float).max(), 
@@ -229,7 +348,11 @@ def get_filter_mask(filters, legend, dope, df):
     and a pandas `df`, build a mask.
     """
     
-    mask = df['Category'].isin(legend) & df['Doped or Acid Exposure (Yes/ No)'].isin(dope)
+    mask = df['Category'].isin(legend) & \
+    df['Doped or Acid Exposure (Yes/ No)'].isin(dope)
+    
+    if not filters:
+        return mask
     
     for i,f in enumerate(filters):
         c = f['props']['id']['column']
@@ -253,97 +376,42 @@ def get_filter_mask(filters, legend, dope, df):
 #
 # ---------------------------------------------------------------------------------------------
 
-
 @dash.callback(
-    Output('legend-div', 'children'),
-    Input('placeholder', 'children')
+    Output('legend', 'value'),
+    Input('legend-toggle-all', 'n_clicks'),
+    State('legend', 'options'),
+    State('legend', 'value')
 )
-def initialize_legend(placeholder):
+def legend_toggle_all(n_clicks, options, value):
+    if n_clicks is None:
+        return value
     
-    with conn.cursor() as cur:
+    return [] if n_clicks %2 == 0 else options
     
-        # get df column names
-        cur.execute("""
-        SELECT column_name
-          FROM information_schema.columns
-         WHERE table_schema = 'public'
-           AND table_name   = 'df'
-             ;
-        """)
-        cols = [x[0] for x in cur.fetchall()]
-
-        # get df
-        cur.execute('select * from df;')
-        df = pd.DataFrame(cur.fetchall(), columns=cols)
-    
-    return dcc.Checklist(
-        df['Category'].unique(), 
-        df['Category'].unique(), 
-        labelStyle={'display': 'block'},
-        style={"height":300, "width":350, "overflow":"auto"}, 
-        id='legend'
-    )
-
-@dash.callback(
-    Output('filter-field-picker-div', 'children'),
-    Input('placeholder', 'children')
-)
-def initialize_filter_field_picker(placeholder):
-
-    with conn.cursor() as cur:
-
-        # get df column names
-        cur.execute("""
-        SELECT column_name
-          FROM information_schema.columns
-         WHERE table_schema = 'public'
-           AND table_name   = 'df'
-             ;
-        """)
-        cols = [x[0] for x in cur.fetchall()]
-
-        # get df
-        cur.execute('select * from df;')
-        df = pd.DataFrame(cur.fetchall(), columns=cols)
-
-    return dcc.Dropdown(
-        [c for c in df.columns if c not in ['Category', 'Doped or Acid Exposure (Yes/ No)']], 
-        [], 
-        multi=True, 
-        placeholder='Pick filter fields', 
-        id='filter-field-picker'
-    )
 
 @dash.callback(
     [
-        Output('graph1-xaxis-dropdown', 'options'),
-        Output('graph1-yaxis-dropdown', 'options'),
-        Output('graph2-xaxis-dropdown', 'options'),
-        Output('graph2-yaxis-dropdown', 'options')
+        Output('filter-fields', 'children'),
+        Output('filter-field-picker', 'value')
     ],
-    Input('placeholder', 'children')
+    [
+        Input('filter-field-picker', 'value'),
+        Input('reset-filters', 'n_clicks')
+    ],
+    [
+        State('filter-fields', 'children'),
+        State('df', 'data'),
+        State('dd', 'data')
+    ]
 )
-def initialize_axis_controls(placeholder):
+def display_filter_controls(value, n_clicks, children, df, dd):
     
-    # todo: default values
-
-    with conn.cursor() as cur:
-        df = get_df(cur)
-        data_dict = get_data_dict(cur).set_index('colname')['coltype']   
-        
-    numeric_cols = [c for c in df.columns if data_dict.loc[c] == 'numeric']
-    categorical_cols = [c for c in df.columns if data_dict.loc[c] != 'numeric']
+    if ctx.triggered_id == 'reset-filters':
+        return [], []
     
-    return [categorical_cols, numeric_cols, numeric_cols, numeric_cols]
-
-@dash.callback(
-    Output('filter-fields', 'children'),
-    Input('filter-field-picker', 'value'),
-    State('filter-fields', 'children')
-)
-def display_filter_controls(value, children):
+    df = pd.DataFrame.from_dict(df)
         
-    res = []
+    res = [[], value]
     
     if children is None or children == []:
         new_cols = value
@@ -354,11 +422,11 @@ def display_filter_controls(value, children):
         new_cols = set(value) - set(existing_cols)
         remove_cols = set(existing_cols) - set(value)
 
-        res = [ctrl for ctrl in children if ctrl['props']['id']['column'] not in remove_cols]
+        res[0] = [ctrl for ctrl in children if ctrl['props']['id']['column'] not in remove_cols]
     
     with conn.cursor() as cur:
         for c in new_cols:
-            res.append(generate_filter_control(c, cur))
+            res[0].append(generate_filter_control(c, cur, df, dd))
 
     return res
 
@@ -376,59 +444,73 @@ def toggle_modal(n1, n2, is_open):
     return is_open
 
 @dash.callback(
-    Output('graph2', 'children'),
+    [
+        Output('graph1', 'children'),
+        Output('graph2', 'children')
+    ],
     Input('update', 'n_clicks'),
+    # Common State
+    [
+        State('legend', 'value'), 
+        State('dope-control', 'value'),
+        State('filter-fields', 'children'),
+        State('df', 'data'),
+        State('dd', 'data')
+    ],
+    # Graph 1 State
+    [
+        State('graph1-xaxis-dropdown', 'value'), 
+        State('graph1-yaxis-dropdown', 'value'), 
+        State('graph1-log', 'value')
+    ],
+    # Graph 2 State
     [
         State('graph2-xaxis-dropdown', 'value'), 
         State('graph2-yaxis-dropdown', 'value'),
         State('graph2-log', 'value'),
-        State('legend', 'value'), 
-        State('dope-control', 'value')
-    ],
-    State('filter-fields', 'children')
+    ]
 )
-def update_bottom_chart(n_clicks, xvar, yvar, log, legend, dope, filters):
+def update_charts(
+    n_clicks, 
+    # Common
+    legend, 
+    dope, 
+    filters,
+    df,
+    dd,
+    # G1
+    g1x, 
+    g1y, 
+    g1log,
+    # G2
+    g2x,
+    g2y,
+    g2log
+):
     
-    with conn.cursor() as cur:
-        df = get_df(cur)
-
+    df = pd.DataFrame.from_dict(df)
+    
     mask = get_filter_mask(filters, legend, dope, df)
-    
-    return dcc.Graph(
-        figure=px.scatter(
-            df[mask], 
-            x=xvar, 
-            y=yvar, 
-            log_x='Log X' in log, 
-            log_y='Log Y' in log
-        )
-    )
-
-@dash.callback(
-    Output('graph1', 'children'),
-    Input('update', 'n_clicks'),
-    [
-        State('graph1-xaxis-dropdown', 'value'), 
-        State('graph1-yaxis-dropdown', 'value'), 
-        State('graph1-log', 'value'), 
-        State('legend', 'value'), 
-        State('dope-control', 'value')
-    ],
-    State('filter-fields', 'children')
-)
-def update_top_chart(n_clicks, xvar, yvar, log, legend, dope, filters):
-    
-    with conn.cursor() as cur:
-        df = get_df(cur)
-
-    mask = get_filter_mask(filters, legend, dope, df)
-    
-    return dcc.Graph(
+        
+    g1 = dcc.Graph(
         figure=px.box(
             df[mask], 
-            x=xvar, 
-            y=yvar, 
-            log_y='Log Y' in log, 
-            color='Production Process'
+            x=g1x, 
+            y=g1y, 
+            log_y='Log Y' in g1log, 
+            # color='Production Process'
         )
     )
+    
+    g2 = dcc.Graph(
+        figure=px.scatter(
+            df[mask], 
+            x=g2x, 
+            y=g2y, 
+            log_x='Log X' in g2log, 
+            log_y='Log Y' in g2log
+        )
+    )
+    
+    
+    return g1, g2
