@@ -6,6 +6,7 @@ import numpy as np
 import plotly.express as px
 import dash_bootstrap_components as dbc
 import psycopg2
+from src.common import get_data_dict
 
 dash.register_page(__name__, path='/')
 
@@ -174,13 +175,6 @@ layout = dbc.Container([navbar, sidebar, content, footer, html.Div(id='placehold
 #
 # TODO: move some of these to a common file
 # ---------------------------------------------------------------------------------------------
-
-def get_data_dict(cur):
-    
-    cur.execute('select * from data_dict;')
-    data_dict = pd.DataFrame(cur.fetchall(), columns=['colname', 'coltype'])
-    
-    return data_dict
 
 def get_df(cur):
     # get df column names

@@ -15,6 +15,8 @@ import psycopg2
 import psycopg2.extras as extras
 import os
 
+from src.common import clean, get_data_dict
+
 dash.register_page(__name__)
 
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -41,34 +43,6 @@ def parse_contents(contents):
 
     return df
 
-
-def clean(df, numeric_cols):
-    """
-    Given a DataFrame, coerce numeric_cols to numeric
-    and drop unnamed/duped columns.
-    """
-    
-    df = df.copy()
-    dropped_cols = list()
-    
-    # DROP UNNAMED AND DUPED COLUMNS -------------------------------------------------
-    to_drop = [c for c in df.columns if 'Unnamed' in c or c.endswith('.1')]
-    for c in to_drop:
-        df.pop(c)
-    dropped_cols = to_drop
-    
-    # CONVERT NUMERIC COLS TO FLOAT -------------------------------------------------
-    for c in df.columns:
-        if c in numeric_cols:
-            df[c] = pd.to_numeric(
-                df[c],
-                errors='coerce' # silently coerce non-numeric values to NaN
-            )
-            
-    # todo: Standardize NaNs
-    # df = df.replace('.*not reported.*', np.NaN, regex=True)
-
-    return {'data': df, 'dropped': dropped_cols}
 
 def update_database(df, data_dict):
     """
@@ -121,15 +95,6 @@ def update_database(df, data_dict):
     # commit changes & close database
     conn.commit()
     cur.close()
-
-    
-def get_data_dict():
-    
-    with conn.cursor() as cur:
-        cur.execute('select * from data_dict;')
-        data_dict = pd.DataFrame(cur.fetchall(), columns=['colname', 'coltype'])
-    
-    return data_dict
 
 def check_credentials(username, password):
     return username == LOGIN_USERNAME and password == LOGIN_PASSWORD
@@ -260,7 +225,9 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
 
     elif ctx.triggered_id == 'upload':
         df_raw = parse_contents(contents)
-        data_dict = get_data_dict()
+        
+        with conn.cursor() as cur:
+            data_dict = get_data_dict(cur)
 
         cleaned_cols = [c for c in df_raw.columns if not 'Unnamed' in c and not c.endswith('.1')]
         new_cols = not set(cleaned_cols).issubset(set(data_dict.colname))

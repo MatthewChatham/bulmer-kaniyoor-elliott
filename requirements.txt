@@ -8,3 +8,4 @@ pandas
 dash-auth
 openpyxl
 psycopg2
+-e ./src
