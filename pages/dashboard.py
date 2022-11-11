@@ -537,7 +537,7 @@ def update_charts(
             )
         
     fig2 = px.scatter(
-            df[mask], 
+            df[mask],
             x=g2x, 
             y=g2y, 
             log_x='Log X' in g2log, 
@@ -545,7 +545,8 @@ def update_charts(
             symbol='Category',
             symbol_map={k:v['marker_symbol'] for k,v in MARKERS.items()},
             color='Category',
-            color_discrete_map={k:v['marker_color'] for k,v in MARKERS.items()}
+            color_discrete_map={k:v['marker_color'] for k,v in MARKERS.items()},
+            hover_data=['Reference']
         )
     
     return dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)

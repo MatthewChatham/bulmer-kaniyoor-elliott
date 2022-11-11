@@ -224,29 +224,28 @@ def clean(df, numeric_cols):
     dropped_cols = list()
     
     # -----------------------STRIP WHITESPACE FROM VALUES ---------------------
-    print('strip whitespace')
     for c in df.columns:
         df[c] = df[c].astype(str).str.strip()
     
     # ----------------------- STANDARDIZE NANS --------------------------------
-    print('standardize nans')
     for c in df.columns:
         mask = (
             df[c].astype(str).str.lower()
             .str.replace('\s+', '', regex=True)
-            .str.contains('notreported|nan')
+            .str.contains('notreported')
+            
+            |
+            
+            df[c].astype(str).str.lower().isin(['nan'])
         )
         df.loc[mask, c] = np.NaN
     
     # ----------------------DROP UNNAMED AND DUPED COLUMNS --------------------
-    print('drop unnamed/dupes')
     drop_cols = [c for c in df.columns if 'Unnamed' in c or c.endswith('.1')]
     df = df.drop(drop_cols, axis=1)
     
     # -----------------------CONVERT NUMERIC COLS TO FLOAT --------------------
-    print('coerce to float')
     for c in df.columns:
-        print(f'\tcoercing {c}')
         if c in numeric_cols:
             df[c] = pd.to_numeric(
                 df[c],
@@ -308,14 +307,11 @@ def update_database(cur, df, dd):
     assert set(df.columns).issubset(set(dd.keys()))
         
     # drop tables
-    print('dropping tables')
     for table_name in ['df', 'dd']:
         cur.execute(f"DROP TABLE IF EXISTS {table_name};")
-        # print(conn.notices[-1])
         
 
     # create and insert into dd
-    print('creating dd')
     cur.execute("""
         CREATE TABLE dd(
             colname text PRIMARY KEY,
@@ -323,11 +319,9 @@ def update_database(cur, df, dd):
         );
     """)
     qstring = "INSERT INTO dd VALUES %s"
-    print('inserting into dd')
     extras.execute_values(cur, qstring, [(k,v) for k,v in dd.items()])
     
     # create df
-    print('creating df')
     colnames = df.columns
     qstring = """CREATE TABLE df("""
     to_join = []
@@ -338,7 +332,6 @@ def update_database(cur, df, dd):
     cur.execute(qstring)
     
     # insert into df
-    print('inserting into df')
     qstring = "INSERT INTO df VALUES %s"
     records = []
     for i,r in df.iterrows():
