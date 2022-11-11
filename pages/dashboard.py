@@ -1,15 +1,31 @@
+# Plotly
+import plotly.express as px
+import plotly.graph_objects as go
+
+# Dash
+import dash
 from dash import (
     Dash, dcc, html, Input, Output, State, 
     page_container, callback, dash_table, ctx
 )
-import dash
+import dash_bootstrap_components as dbc
+
+# Other
 import os
+import math
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import dash_bootstrap_components as dbc
 import psycopg2
-from src.common import get_dd, get_df, CATEGORY_MAPPER, MARKERS
+
+# Common
+from src.common import (
+    get_dd, get_df, 
+    CATEGORY_MAPPER, MARKERS, BENCHMARK_COLORS,
+    construct_fig1, compute_benchmarks
+)
+
+px.defaults.symbol_map = {k:v['marker_symbol'] for k,v in MARKERS.items()}
+
 
 dash.register_page(__name__, path='/')
 
@@ -53,11 +69,10 @@ CONTENT_STYLE = {
 }
 
 
-# ------------------------------ PREDEFINED LAYOUT ELEMENTS -----------------------------------
+# ------------------------------ PREDEFINED LAYOUT ELEMENTS -------------------
 #
 #
-# ---------------------------------------------------------------------------------------------
-
+# -----------------------------------------------------------------------------
 navbar = dbc.Navbar(
     dbc.Container(
         [
@@ -208,7 +223,7 @@ def serve_content(df, dd):
                 id='graph1-yaxis-dropdown'
             ),
             dcc.Checklist(
-                ['Log Y'], 
+                ['Log Y', 'Show Benchmarks'], 
                 ['Log Y'], 
                 id='graph1-log'
             ),
@@ -270,10 +285,9 @@ footer = dbc.Navbar(
 )
 
 
-# ------------------------------ LAYOUT -------------------------------------------------------
+# ------------------------------ LAYOUT ---------------------------------------
 #
-#
-# ---------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def serve_layout():
     
@@ -310,10 +324,10 @@ layout = serve_layout
 # layout = html.Div('test')
 
 
-# ------------------------------ HELPERS ------------------------------------------------------
+# ------------------------------ HELPERS --------------------------------------
 #
 #
-# ---------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def generate_filter_control(c, cur, df, dd):
@@ -371,10 +385,10 @@ def get_filter_mask(filters, legend, dope, df):
         
     return mask
 
-# ------------------------------ CALLBACKS ----------------------------------------------------
+# ------------------------------ CALLBACKS ------------------------------------
 #
 #
-# ---------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 @dash.callback(
     Output('legend', 'value'),
@@ -418,11 +432,17 @@ def display_filter_controls(value, n_clicks, children, df, dd):
     
     else:
     
-        existing_cols = set([ctrl['props']['id']['column'] for ctrl in children])
+        existing_cols = set([
+            ctrl['props']['id']['column'] 
+            for ctrl in children
+        ])
         new_cols = set(value) - set(existing_cols)
         remove_cols = set(existing_cols) - set(value)
 
-        res[0] = [ctrl for ctrl in children if ctrl['props']['id']['column'] not in remove_cols]
+        res[0] = [
+            ctrl for ctrl in children 
+            if ctrl['props']['id']['column'] not in remove_cols
+        ]
     
     with conn.cursor() as cur:
         for c in new_cols:
@@ -491,19 +511,32 @@ def update_charts(
     df = pd.DataFrame.from_dict(df)
     
     mask = get_filter_mask(filters, legend, dope, df)
-        
-    g1 = dcc.Graph(
-        figure=px.box(
-            df[mask], 
-            x=g1x, 
-            y=g1y, 
-            log_y='Log Y' in g1log, 
-            # color='Production Process'
-        )
+    
+    fig1 = construct_fig1(
+        df[mask], 
+        g1x, 
+        g1y, 
+        'Log Y' in g1log
     )
     
-    g2 = dcc.Graph(
-        figure=px.scatter(
+    if 'Show Benchmarks' in g1log:
+        benchmarks = compute_benchmarks(df, g1y)
+        for m,v in benchmarks.items():
+            if np.isnan(v):
+                continue
+
+            fig1.add_hline(
+                y=v,
+                line={
+                    'color': BENCHMARK_COLORS[m],
+                    'dash': 'dash'
+                },
+                annotation_text=m, 
+                annotation_position='right',
+                annotation_y=math.log(v,10) if 'Log Y' in g1log else v
+            )
+        
+    fig2 = px.scatter(
             df[mask], 
             x=g2x, 
             y=g2y, 
@@ -514,9 +547,5 @@ def update_charts(
             color='Category',
             color_discrete_map={k:v['marker_color'] for k,v in MARKERS.items()}
         )
-    )
     
-
-    
-    
-    return g1, g2
+    return dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)

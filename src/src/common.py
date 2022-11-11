@@ -2,6 +2,17 @@ import numpy as np
 import pandas as pd
 import psycopg2
 import psycopg2.extras as extras
+import plotly.graph_objects as go
+import math
+
+# CONSTANTS -------------------------------------------------------------------
+
+BENCHMARK_COLORS = {
+        'Copper': '#B87333',
+        'Iron': '#a19d94',
+        'Steel': 'white',
+        'SCG': 'black'
+    }
 
 MARKERS = {
     'Aligned Few-wall CNTs': {
@@ -17,7 +28,7 @@ MARKERS = {
         'marker_color': 'gray'
     },
     'Carbon Fiber': {
-        'marker_symbol': 'square-open',
+        'marker_symbol': 'square',
         'marker_color': 'black'
     },
     'Conductive Polymer': {
@@ -70,7 +81,7 @@ MARKERS = {
         'marker_color': 'gray'
     },
     'Single crystal graphite': {
-        'marker_symbol': 'square-open',
+        'marker_symbol': 'square',
         'marker_color': 'black'
     },
     'Superconductor': {
@@ -115,18 +126,89 @@ CATEGORY_MAPPER = {
 	'Diamond': 'Other',
 }
 
-def get_conn():
+# Plotting --------------------------------------------------------------------
+def compute_benchmarks(df, y):
+    res = {
+        'Copper': None,
+        'Iron': None,
+        'SCG': None,
+        'Steel': None
+    }
     
-    pth = "/Users/mac/Documents/Consulting/bulmer"\
-    "/meta_analysis_app/meta_analysis_app/.env"
+    res['Copper'] = df.loc[df.Notes == 'Copper', y].mean()
+    res['Iron'] = df.loc[df.Notes == 'Iron', y].mean()
+    mask = df.Notes == 'Single Crystal Graphite'
+    res['SCG'] = df.loc[mask, y].mean()
     
-    with open(pth, 'r') as f:
-        line1 = f.read().split('\n')[0]
-        DATABASE_URL = line1.split('=')[1]
+    mask = df.Notes.str.contains('steel', case=False)
+    res['Steel'] = df.loc[mask, y].mean()
     
-    conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
+    return res
+
+def construct_custom_strip(df, x, y):
+    traces = []
+
+    # one trace per category/dope combo, with custom color/symbol
+    for m in df['Category'].unique():
+        for d in df['Doped or Acid Exposure (Yes/ No)'].unique():
+        
+            mask = (df['Category'] == m) & \
+                (df['Doped or Acid Exposure (Yes/ No)'] == d)
+
+            markers = {k.replace('marker_', ''):v for k,v in MARKERS[m].items()}
+            markers['opacity'] = 0.8
+            
+            if d == 'No':
+                markers['symbol'] += '-open'
+                markers['opacity'] = 0.5
+
+            traces.append({
+                'x': df.loc[mask, x],
+                'y': df.loc[mask, y],
+                'name': m, 
+                'marker': markers
+            })
+
+    # Update (add) trace elements common to all traces.
+    for t in traces:
+        t.update({'type': 'box',
+                  'boxpoints': 'all',
+                  'fillcolor': 'rgba(255,255,255,0)',
+                  'hoveron': 'points',
+                  # 'hovertemplate': 'value=%{x}<br>Price=%{y}<extra></extra>',
+                  'line': {'color': 'rgba(255,255,255,0)'},
+                  'pointpos': 0,
+                  'showlegend': True})
     
-    return conn
+    return traces
+
+
+def construct_fig1(df, x, y, log):
+    
+    fig = go.Figure()
+    
+    for v in df[x].unique():
+        tracedf = df.loc[df[x] == v]
+        
+        fig.add_trace(
+            go.Box(
+                y=tracedf[y],
+                name=v,
+                # Don't show or hover on outlier points
+                marker={'opacity':0},
+                hoveron='boxes',
+                line={'color': MARKERS[v]['marker_color'] if x == 'Category' else 'gray'}
+            )
+        )
+        
+    fig.add_traces(construct_custom_strip(df, x, y))
+    
+    fig.update_yaxes(type='log' if log else 'linear', nticks=10)
+    fig.update_layout(showlegend=False)
+    
+    return fig
+
+# Data processing -------------------------------------------------------------
 
 def clean(df, numeric_cols):
     """
@@ -168,6 +250,21 @@ def clean(df, numeric_cols):
             )
     
     return {'data': df, 'dropped': drop_cols}
+
+# DB funcs --------------------------------------------------------------------
+
+def get_conn():
+    
+    pth = "/Users/mac/Documents/Consulting/bulmer"\
+    "/meta_analysis_app/meta_analysis_app/.env"
+    
+    with open(pth, 'r') as f:
+        line1 = f.read().split('\n')[0]
+        DATABASE_URL = line1.split('=')[1]
+    
+    conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
+    
+    return conn
 
 def get_dd(cur):
     
