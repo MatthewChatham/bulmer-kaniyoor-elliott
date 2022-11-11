@@ -99,6 +99,10 @@ MARKERS = {
     'Unaligned multiwall CNTs': {
         'marker_symbol': 'square',
         'marker_color': '#ee9752'
+    },
+    'NaN': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
     }
 }
 
