@@ -9,7 +9,7 @@ import numpy as np
 import plotly.express as px
 import dash_bootstrap_components as dbc
 import psycopg2
-from src.common import get_dd, get_df, CATEGORY_MAPPER
+from src.common import get_dd, get_df, CATEGORY_MAPPER, MARKERS
 
 dash.register_page(__name__, path='/')
 
@@ -508,9 +508,15 @@ def update_charts(
             x=g2x, 
             y=g2y, 
             log_x='Log X' in g2log, 
-            log_y='Log Y' in g2log
+            log_y='Log Y' in g2log,
+            symbol='Category',
+            symbol_map={k:v['marker_symbol'] for k,v in MARKERS.items()},
+            color='Category',
+            color_discrete_map={k:v['marker_color'] for k,v in MARKERS.items()}
         )
     )
+    
+
     
     
     return g1, g2

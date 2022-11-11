@@ -3,6 +3,94 @@ import pandas as pd
 import psycopg2
 import psycopg2.extras as extras
 
+MARKERS = {
+    'Aligned Few-wall CNTs': {
+        'marker_symbol': 'diamond',
+        'marker_color': '#305ba9'
+    },
+    'Aligned Multiwall CNTs': {
+        'marker_symbol': 'triangle-up',
+        'marker_color': '#d12232'
+    },
+    'Amorphous carbon': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Carbon Fiber': {
+        'marker_symbol': 'square-open',
+        'marker_color': 'black'
+    },
+    'Conductive Polymer': {
+        'marker_symbol': 'square',
+        'marker_color': '#cc3b8c'
+    },
+    'Diamond': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'GIC': {
+        'marker_symbol': 'square',
+        'marker_color': 'black'
+    },
+    'Glassy Carbon': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Graphene Nanoribbon': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Individual Bundle': {
+        'marker_symbol': 'cross',
+        'marker_color': '#305ba9'
+    },
+    'Individual FWCNT': {
+        'marker_symbol': 'x',
+        'marker_color': '#305ba9'
+        
+    },
+    'Individual Multiwall CNTs': {
+        'marker_symbol': 'star',
+        'marker_color': '#d12232'
+    },
+    'Metal': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Metal CNT Composite': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Mott minimum conductivity': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Paper': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Single crystal graphite': {
+        'marker_symbol': 'square-open',
+        'marker_color': 'black'
+    },
+    'Superconductor': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Synthetic fiber': {
+        'marker_symbol': 'circle',
+        'marker_color': 'gray'
+    },
+    'Unaligned Few-wall CNTs': {
+        'marker_symbol': 'circle',
+        'marker_color': '#61b84e'
+    },
+    'Unaligned multiwall CNTs': {
+        'marker_symbol': 'square',
+        'marker_color': '#ee9752'
+    }
+}
+
 CATEGORY_MAPPER = {
 	'Aligned Multiwall CNTs': 'Aligned MWCNT',
 	'Aligned Few-wall CNTs': 'Aligned FWCNT',
