@@ -19,7 +19,7 @@ import psycopg2
 
 # Common
 from src.common import (
-    conn, get_dd, get_df,
+    get_dd, get_df,
     CATEGORY_MAPPER, MARKERS, BENCHMARK_COLORS,
     construct_fig1, construct_fig2, compute_benchmarks
 )
@@ -323,9 +323,9 @@ layout = serve_layout
 # -----------------------------------------------------------------------------
 
 
-def generate_filter_control(c, cur, df, dd):
+def generate_filter_control(c, df, dd):
     """
-    Given a column name `c` and a cursor `cur`,
+    Given a column name `c`,
     generate an appropriate filter control based
     on the column type and values.
     """
@@ -437,9 +437,8 @@ def display_filter_controls(value, n_clicks, children, df, dd):
             if ctrl['props']['id']['column'] not in remove_cols
         ]
     
-    with conn.cursor() as cur:
-        for c in new_cols:
-            res[0].append(generate_filter_control(c, cur, df, dd))
+    for c in new_cols:
+        res[0].append(generate_filter_control(c, df, dd))
 
     return res
 

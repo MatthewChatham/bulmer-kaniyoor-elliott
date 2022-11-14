@@ -15,7 +15,7 @@ import psycopg2
 import psycopg2.extras as extras
 import os
 
-from src.common import conn, clean, get_dd, update_database
+from src.common import get_conn, clean, get_dd, update_database
 
 dash.register_page(__name__)
 
@@ -217,10 +217,14 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
 
     elif ctx.triggered_id == 'numeric-submit':
         
+        conn = get_conn()
+        
         # add new column to dictionary
         with conn, conn.cursor() as cur:
             qstring = "INSERT INTO dd VALUES %s"
             extras.execute_values(cur, qstring, [(c, 'numeric' if c in numeric_cols else 'text') for c in new_colnames])
+            
+        conn.close()
         
         res_style = goto('upload')
 

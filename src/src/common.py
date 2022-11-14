@@ -7,14 +7,9 @@ import math
 import plotly.express as px
 import os
 
-# DB connection ---------------------------------------------------------------
-DATABASE_URL = os.environ['DATABASE_URL']
-conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
-conn.autocommit = True
-
 # CONSTANTS -------------------------------------------------------------------
 
-
+DATABASE_URL = os.environ['DATABASE_URL']
 
 BENCHMARK_COLORS = {
         'Copper': '#B87333',
@@ -332,27 +327,23 @@ def clean(df, numeric_cols):
 # DB funcs --------------------------------------------------------------------
 
 def get_conn():
-    
-    pth = "/Users/mac/Documents/Consulting/bulmer"\
-    "/meta_analysis_app/meta_analysis_app/.env"
-    
-    with open(pth, 'r') as f:
-        line1 = f.read().split('\n')[0]
-        DATABASE_URL = line1.split('=')[1]
-    
-    conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
-    
-    return conn
+    return psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
 
 def get_dd():
+    conn = get_conn()
+    
     with conn, conn.cursor() as cur:
             cur.execute('select * from dd;')
             dd = pd.DataFrame(cur.fetchall(), columns=['colname', 'coltype'])
             dd = {r['colname']:r['coltype'] for i,r in dd.iterrows()}
+            
+    conn.close()
     
     return dd
 
 def get_df():
+    conn = get_conn()
+    
     with conn, conn.cursor() as cur:
         # get df column names
         cur.execute("""
@@ -366,6 +357,8 @@ def get_df():
 
         cur.execute('select * from df;')
         df = pd.DataFrame(cur.fetchall(), columns=cols)
+        
+    conn.close()
 
     return df
 
@@ -379,6 +372,8 @@ def update_database(df, dd):
     
     # fail if not all columns have types
     assert set(df.columns).issubset(set(dd.keys()))
+    
+    conn = get_conn()
     
     with conn, conn.cursor() as cur:
 
@@ -417,3 +412,5 @@ def update_database(df, dd):
         for i,r in df.iterrows():
             records.append(tuple(r.values))
         extras.execute_values(cur, qstring, records)
+        
+    conn.close()
