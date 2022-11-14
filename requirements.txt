@@ -1,3 +1,5 @@
+-e ./src
+
 plotly
 numpy
 flask
@@ -8,4 +10,4 @@ pandas
 dash-auth
 openpyxl
 psycopg2
--e ./src
+scikit-learn
