@@ -4,6 +4,8 @@ import psycopg2
 import psycopg2.extras as extras
 import plotly.graph_objects as go
 import math
+import plotly.express as px
+from sklearn.decomposition import PCA
 
 # CONSTANTS -------------------------------------------------------------------
 
@@ -170,7 +172,8 @@ def construct_custom_strip(df, x, y):
                 'x': df.loc[mask, x],
                 'y': df.loc[mask, y],
                 'name': m, 
-                'marker': markers
+                'marker': markers,
+                'customdata': df['Reference'],
             })
 
     # Update (add) trace elements common to all traces.
@@ -179,7 +182,7 @@ def construct_custom_strip(df, x, y):
                   'boxpoints': 'all',
                   'fillcolor': 'rgba(255,255,255,0)',
                   'hoveron': 'points',
-                  # 'hovertemplate': 'value=%{x}<br>Price=%{y}<extra></extra>',
+                  'hovertemplate': '%{customdata}',
                   'line': {'color': 'rgba(255,255,255,0)'},
                   'pointpos': 0,
                   'showlegend': True})
@@ -187,28 +190,93 @@ def construct_custom_strip(df, x, y):
     return traces
 
 
-def construct_fig1(df, x, y, log):
+def construct_fig1(df, x, y, log, squash):
     
     fig = go.Figure()
     
-    for v in df[x].unique():
-        tracedf = df.loc[df[x] == v]
-        
+    if squash:
+        print('squashing')
         fig.add_trace(
             go.Box(
-                y=tracedf[y],
-                name=v,
+                y=df[y],
+                name='All',
+                boxpoints='all',
+                fillcolor='white',
+                pointpos=0,
+                marker={'color': 'black'},
+                line={'color':'black'},
+                customdata=df['Reference'],
+                hovertemplate='%{customdata}'
                 # Don't show or hover on outlier points
-                marker={'opacity':0},
-                hoveron='boxes',
-                line={'color': MARKERS[v]['marker_color'] if x == 'Category' else 'gray'}
+                # marker={'opacity':0},
+                
+                # fillcolor='white',
+                # line={
+                #     'color': 'gray',
+                #     # MARKERS[v]['marker_color'] 
+                #     # if x == 'Category' else 'gray'
+                # }
             )
         )
         
-    fig.add_traces(construct_custom_strip(df, x, y))
+    else:
     
-    fig.update_yaxes(type='log' if log else 'linear', nticks=10)
-    fig.update_layout(showlegend=False)
+        for v in df[x].unique():
+            tracedf = df.loc[df[x] == v]
+
+            fig.add_trace(
+                go.Box(
+                    y=tracedf[y],
+                    name=v,
+                    # Don't show or hover on outlier points
+                    marker={'opacity':0},
+                    hoveron='boxes',
+                    fillcolor='white',
+                    line={
+                        'color': 'gray',
+                        # MARKERS[v]['marker_color'] 
+                        # if x == 'Category' else 'gray'
+                    },
+                )
+            )
+
+        fig.add_traces(construct_custom_strip(df, x, y))
+    
+    fig.update_yaxes(
+        type='log' if log else 'linear',
+        nticks=10
+    )
+    
+    fig.update_layout(
+        showlegend=False, 
+        yaxis_title=y,
+        xaxis_title=x
+    )
+    
+    return fig
+
+def construct_fig2(df, x, y, logx, logy, squash):
+    
+    symbol = color = 'Category'
+    symbol_map = {k:v['marker_symbol'] for k,v in MARKERS.items()}
+    color_map = {k:v['marker_color'] for k,v in MARKERS.items()}
+    
+    fig = px.scatter(
+        df,
+        x=x, 
+        y=y, 
+        log_x=logx, 
+        log_y=logy,
+        symbol=symbol,
+        symbol_map=symbol_map,
+        color=color,
+        color_discrete_map=color_map,
+        hover_data=['Reference']
+    )
+    
+    if squash:
+        fig.update_traces(marker={'symbol':'circle', 'color':'black'})
+        fig.update_layout(showlegend=False)
     
     return fig
 

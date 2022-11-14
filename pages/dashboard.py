@@ -21,11 +21,8 @@ import psycopg2
 from src.common import (
     get_dd, get_df, 
     CATEGORY_MAPPER, MARKERS, BENCHMARK_COLORS,
-    construct_fig1, compute_benchmarks
+    construct_fig1, construct_fig2, compute_benchmarks
 )
-
-px.defaults.symbol_map = {k:v['marker_symbol'] for k,v in MARKERS.items()}
-
 
 dash.register_page(__name__, path='/')
 
@@ -181,15 +178,15 @@ def serve_sidebar(df):
                         )
                     ]
                 ),
-
                 html.Hr(),
+                
                 html.P('Doped or Acid Exposure (Yes/ No)'),
                 dcc.Checklist(
                     ['Yes', 'No'], 
                     ['Yes', 'No'], 
                     id='dope-control'
                 ),
-                html.Hr(),
+                html.Hr(),                
 
                 dbc.Button("Update charts", id="update", n_clicks=0),
             ])
@@ -223,7 +220,7 @@ def serve_content(df, dd):
                 id='graph1-yaxis-dropdown'
             ),
             dcc.Checklist(
-                ['Log Y', 'Show Benchmarks'], 
+                ['Log Y', 'Squash', 'Show Benchmarks'], 
                 ['Log Y'], 
                 id='graph1-log'
             ),
@@ -254,8 +251,8 @@ def serve_content(df, dd):
                 id='graph2-yaxis-dropdown'
             ),
             dcc.Checklist(
-                ['Log X', 'Log Y'], 
-                ['Log X', 'Log Y'], 
+                ['Log X', 'Log Y', 'Squash', 'Show Benchmarks'], 
+                ['Log X', 'Log Y', 'Show Benchmarks'], 
                 id='graph2-log'
             ),
             html.Div(
@@ -516,9 +513,20 @@ def update_charts(
         df[mask], 
         g1x, 
         g1y, 
-        'Log Y' in g1log
+        'Log Y' in g1log,
+        squash='Squash' in g1log
+    )
+        
+    fig2 = construct_fig2(
+        df[mask], 
+        x=g2x, 
+        y=g2y,
+        logx='Log X' in g2log,
+        logy='Log Y' in g2log,
+        squash='Squash' in g2log
     )
     
+    # Graph 1 Benchmarks
     if 'Show Benchmarks' in g1log:
         benchmarks = compute_benchmarks(df, g1y)
         for m,v in benchmarks.items():
@@ -535,18 +543,65 @@ def update_charts(
                 annotation_position='right',
                 annotation_y=math.log(v,10) if 'Log Y' in g1log else v
             )
+            
+            
+    # todo: Graph 2 Benchmarks
+    if 'Show Benchmarks' in g2log:
+        print('entered `if` statement for benchmarks')
+        benchmarks = compute_benchmarks_g2(df, g2x, g2y)
+        bm = pd.DataFrame(benchmarks).T.reset_index()
+        bm.dropna(inplace=True)
+        print(bm)
         
-    fig2 = px.scatter(
-            df[mask],
-            x=g2x, 
-            y=g2y, 
-            log_x='Log X' in g2log, 
-            log_y='Log Y' in g2log,
-            symbol='Category',
-            symbol_map={k:v['marker_symbol'] for k,v in MARKERS.items()},
-            color='Category',
-            color_discrete_map={k:v['marker_color'] for k,v in MARKERS.items()},
-            hover_data=['Reference']
-        )
-    
+        for i,r in bm.iterrows():
+            fig2.add_trace(
+                go.Scatter(
+                    mode='markers',
+                    x=[r[0]],
+                    y=[r[1]],
+                    marker=dict(
+                        color='black',
+                        size=20,
+                        line=dict(
+                            color='black',
+                            width=2
+                        ),
+                        symbol='x-thin'
+                    ),
+                    showlegend=True,
+                    name=r['index']
+                )
+            )
+            
     return dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)
+
+def compute_benchmarks_g2(df, x, y):
+    # todo: add aluminum for both benchmarks
+    res = {
+        'Copper': [],
+        'Iron': [],
+        'SCG': [],
+        'Steel': [],
+    }
+    
+    # Compute X
+    res['Copper'].append(df.loc[df.Notes == 'Copper', x].mean())
+    res['Iron'].append(df.loc[df.Notes == 'Iron', x].mean())
+    
+    mask = df.Notes == 'Single Crystal Graphite'
+    res['SCG'].append(df.loc[mask, x].mean())
+    
+    mask = df.Notes.str.contains('steel', case=False)
+    res['Steel'].append(df.loc[mask, x].mean())
+    
+    # Compute Y
+    res['Copper'].append(df.loc[df.Notes == 'Copper', y].mean())
+    res['Iron'].append(df.loc[df.Notes == 'Iron', y].mean())
+    
+    mask = df.Notes == 'Single Crystal Graphite'
+    res['SCG'].append(df.loc[mask, y].mean())
+    
+    mask = df.Notes.str.contains('steel', case=False)
+    res['Steel'].append(df.loc[mask, y].mean())
+    
+    return res
