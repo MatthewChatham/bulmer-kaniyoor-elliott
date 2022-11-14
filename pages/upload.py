@@ -15,16 +15,13 @@ import psycopg2
 import psycopg2.extras as extras
 import os
 
-from src.common import clean, get_dd, update_database
+from src.common import conn, clean, get_dd, update_database
 
 dash.register_page(__name__)
 
 DATABASE_URL = os.environ['DATABASE_URL']
 LOGIN_USERNAME = os.environ['LOGIN_USERNAME']
 LOGIN_PASSWORD = os.environ['LOGIN_PASSWORD']
-
-conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
-conn.autocommit = True
 
 # ------------------------------ HELPER FUNCTIONS ---------------------------------------------
 #
@@ -175,8 +172,7 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
     elif ctx.triggered_id == 'upload':
         df_raw = parse_contents(contents)
         
-        with conn.cursor() as cur:
-            dd = get_dd(cur)
+        dd = get_dd()
 
         cleaned_cols = [c for c in df_raw.columns if not 'Unnamed' in c and not c.endswith('.1')]
         new_cols = not set(cleaned_cols).issubset(set(dd.keys()))
@@ -188,8 +184,7 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
             clean_result = clean(df_raw, numeric_cols)
 
             print('updating')
-            with conn.cursor() as cur:
-                update_database(cur, clean_result['data'], dd)
+            update_database(clean_result['data'], dd)
 
             print('prepping result')
             msg = f'''The following columns were dropped either because 
@@ -223,7 +218,7 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
     elif ctx.triggered_id == 'numeric-submit':
         
         # add new column to dictionary
-        with conn.cursor() as cur:
+        with conn, conn.cursor() as cur:
             qstring = "INSERT INTO dd VALUES %s"
             extras.execute_values(cur, qstring, [(c, 'numeric' if c in numeric_cols else 'text') for c in new_colnames])
         

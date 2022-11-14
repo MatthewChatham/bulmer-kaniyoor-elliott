@@ -5,9 +5,16 @@ import psycopg2.extras as extras
 import plotly.graph_objects as go
 import math
 import plotly.express as px
-from sklearn.decomposition import PCA
+import os
+
+# DB connection ---------------------------------------------------------------
+DATABASE_URL = os.environ['DATABASE_URL']
+conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
+conn.autocommit = True
 
 # CONSTANTS -------------------------------------------------------------------
+
+
 
 BENCHMARK_COLORS = {
         'Copper': '#B87333',
@@ -337,33 +344,32 @@ def get_conn():
     
     return conn
 
-def get_dd(cur):
-    
-    cur.execute('select * from dd;')
-    dd = pd.DataFrame(cur.fetchall(), columns=['colname', 'coltype'])
-       
-    dd = {r['colname']:r['coltype'] for i,r in dd.iterrows()}
+def get_dd():
+    with conn, conn.cursor() as cur:
+            cur.execute('select * from dd;')
+            dd = pd.DataFrame(cur.fetchall(), columns=['colname', 'coltype'])
+            dd = {r['colname']:r['coltype'] for i,r in dd.iterrows()}
     
     return dd
 
-def get_df(cur):
-    
-    # get df column names
-    cur.execute("""
-    SELECT column_name
-      FROM information_schema.columns
-     WHERE table_schema = 'public'
-       AND table_name   = 'df'
-         ;
-    """)
-    cols = [x[0] for x in cur.fetchall()]
-    
-    cur.execute('select * from df;')
-    df = pd.DataFrame(cur.fetchall(), columns=cols)
+def get_df():
+    with conn, conn.cursor() as cur:
+        # get df column names
+        cur.execute("""
+        SELECT column_name
+          FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name   = 'df'
+             ;
+        """)
+        cols = [x[0] for x in cur.fetchall()]
+
+        cur.execute('select * from df;')
+        df = pd.DataFrame(cur.fetchall(), columns=cols)
 
     return df
 
-def update_database(cur, df, dd):
+def update_database(df, dd):
     """
     
     Given a pandas DataFrame and a dd representing 
@@ -374,40 +380,40 @@ def update_database(cur, df, dd):
     # fail if not all columns have types
     assert set(df.columns).issubset(set(dd.keys()))
     
-    print('dropping tables')
-    # drop tables
-    for table_name in ['df', 'dd']:
-        cur.execute(f"DROP TABLE IF EXISTS {table_name};")
-        print(conn.notices[-1])
-        
+    with conn, conn.cursor() as cur:
 
-    print('recreating dd')
-    # create and insert into dd
-    cur.execute("""
-        CREATE TABLE dd(
-            colname text PRIMARY KEY,
-            coltype text NOT NULL
-        );
-    """)
-    print('inserting into dd')
-    qstring = "INSERT INTO dd VALUES %s"
-    extras.execute_values(cur, qstring, [(k,v) for k,v in dd.items()])
-    
-    print('recreating df')
-    # create df
-    colnames = df.columns
-    qstring = """CREATE TABLE df("""
-    to_join = []
-    for c in colnames:
-        to_join.append(f""""{c}" {'numeric' if dd[c] == 'numeric' else 'text'}""")
-    qstring += ',\n'.join(to_join)
-    qstring += ");"
-    cur.execute(qstring)
-    
-    print('inserting into df')
-    # insert into df
-    qstring = "INSERT INTO df VALUES %s"
-    records = []
-    for i,r in df.iterrows():
-        records.append(tuple(r.values))
-    extras.execute_values(cur, qstring, records)
+        print('dropping tables')
+        # drop tables
+        for table_name in ['df', 'dd']:
+            cur.execute(f"DROP TABLE IF EXISTS {table_name};")
+
+        print('recreating dd')
+        # create and insert into dd
+        cur.execute("""
+            CREATE TABLE dd(
+                colname text PRIMARY KEY,
+                coltype text NOT NULL
+            );
+        """)
+        print('inserting into dd')
+        qstring = "INSERT INTO dd VALUES %s"
+        extras.execute_values(cur, qstring, [(k,v) for k,v in dd.items()])
+
+        print('recreating df')
+        # create df
+        colnames = df.columns
+        qstring = """CREATE TABLE df("""
+        to_join = []
+        for c in colnames:
+            to_join.append(f""""{c}" {'numeric' if dd[c] == 'numeric' else 'text'}""")
+        qstring += ',\n'.join(to_join)
+        qstring += ");"
+        cur.execute(qstring)
+
+        print('inserting into df')
+        # insert into df
+        qstring = "INSERT INTO df VALUES %s"
+        records = []
+        for i,r in df.iterrows():
+            records.append(tuple(r.values))
+        extras.execute_values(cur, qstring, records)

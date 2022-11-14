@@ -19,15 +19,12 @@ import psycopg2
 
 # Common
 from src.common import (
-    get_dd, get_df, 
+    conn, get_dd, get_df,
     CATEGORY_MAPPER, MARKERS, BENCHMARK_COLORS,
     construct_fig1, construct_fig2, compute_benchmarks
 )
 
 dash.register_page(__name__, path='/')
-
-DATABASE_URL = os.environ['DATABASE_URL']
-conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
 
 
 # -------------------------- CONSTANTS & STYLE --------------------------------
@@ -288,9 +285,8 @@ footer = dbc.Navbar(
 
 def serve_layout():
     
-    with conn.cursor() as cur:
-        df = get_df(cur)
-        dd = get_dd(cur)
+    df = get_df()
+    dd = get_dd()
     
     # store the df in memory so callbacks don't need DB calls
     store_df = dcc.Store(
