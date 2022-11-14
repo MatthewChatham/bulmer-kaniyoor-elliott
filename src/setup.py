@@ -1,7 +1,12 @@
 from setuptools import setup, find_packages
 
 with open('../requirements.txt', 'r') as f:
-    requirements = [str.strip(fn) for fn in f.read().split('\n') if not fn.startswith('-e')]
+    requirements = [
+        str.strip(fn) 
+        for fn in f.read().split('\n') 
+        if not fn.startswith('-e')
+        and not fn.startswith('.')
+    ]
 
 setup(
     name='src',
