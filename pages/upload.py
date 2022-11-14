@@ -24,6 +24,7 @@ LOGIN_USERNAME = os.environ['LOGIN_USERNAME']
 LOGIN_PASSWORD = os.environ['LOGIN_PASSWORD']
 
 conn = psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
+conn.autocommit = True
 
 # ------------------------------ HELPER FUNCTIONS ---------------------------------------------
 #
