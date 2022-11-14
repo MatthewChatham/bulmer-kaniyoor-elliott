@@ -378,6 +378,7 @@ def update_database(cur, df, dd):
     # drop tables
     for table_name in ['df', 'dd']:
         cur.execute(f"DROP TABLE IF EXISTS {table_name};")
+        print(conn.notices[-1])
         
 
     print('recreating dd')
