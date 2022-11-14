@@ -5,7 +5,7 @@ with open('../requirements.txt', 'r') as f:
 
 setup(
     name='src',
-    version='1.0.0',
+    version='1.0.1',
     author='Matthew Chatham',
     author_email='matthew.a.chatham@gmail.com',
     description='CNT Meta-Analysis Explorer',

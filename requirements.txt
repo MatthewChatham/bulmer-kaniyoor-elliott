@@ -1,4 +1,4 @@
--e ./src
+./src
 
 plotly
 numpy
@@ -10,4 +10,5 @@ pandas
 dash-auth
 openpyxl
 psycopg2
+# Remove unless JMP regions work out
 scikit-learn
