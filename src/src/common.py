@@ -373,12 +373,14 @@ def update_database(cur, df, dd):
     
     # fail if not all columns have types
     assert set(df.columns).issubset(set(dd.keys()))
-        
+    
+    print('dropping tables')
     # drop tables
     for table_name in ['df', 'dd']:
         cur.execute(f"DROP TABLE IF EXISTS {table_name};")
         
 
+    print('recreating dd')
     # create and insert into dd
     cur.execute("""
         CREATE TABLE dd(
@@ -386,9 +388,11 @@ def update_database(cur, df, dd):
             coltype text NOT NULL
         );
     """)
+    print('inserting into dd')
     qstring = "INSERT INTO dd VALUES %s"
     extras.execute_values(cur, qstring, [(k,v) for k,v in dd.items()])
     
+    print('recreating df')
     # create df
     colnames = df.columns
     qstring = """CREATE TABLE df("""
@@ -399,6 +403,7 @@ def update_database(cur, df, dd):
     qstring += ");"
     cur.execute(qstring)
     
+    print('inserting into df')
     # insert into df
     qstring = "INSERT INTO df VALUES %s"
     records = []

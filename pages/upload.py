@@ -189,7 +189,6 @@ def callback(lclicks, contents, nclicks, username, password, numeric_cols, new_c
             print('updating')
             with conn.cursor() as cur:
                 update_database(cur, clean_result['data'], dd)
-                conn.commit()
 
             print('prepping result')
             msg = f'''The following columns were dropped either because 
