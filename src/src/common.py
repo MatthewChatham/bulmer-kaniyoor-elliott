@@ -6,6 +6,9 @@ import plotly.graph_objects as go
 import math
 import plotly.express as px
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # CONSTANTS -------------------------------------------------------------------
 
@@ -194,6 +197,8 @@ def construct_custom_strip(df, x, y):
 
 def construct_fig1(df, x, y, log, squash):
     
+    df = df[df[x].notnull() & df[y].notnull()]
+    
     fig = go.Figure()
     
     if squash:
@@ -258,6 +263,8 @@ def construct_fig1(df, x, y, log, squash):
     return fig
 
 def construct_fig2(df, x, y, logx, logy, squash):
+    
+    df = df[df[x].notnull() & df[y].notnull()]
     
     symbol = color = 'Category'
     symbol_map = {k:v['marker_symbol'] for k,v in MARKERS.items()}

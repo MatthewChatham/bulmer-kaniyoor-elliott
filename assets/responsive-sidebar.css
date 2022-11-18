@@ -1,0 +1,190 @@
+/*
+###############################################################################
+    
+    Base
+
+###############################################################################
+*/
+
+/* add the three horizontal bars icon for the toggle */
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 30 30' xmlns=\
+      'http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba(0, 0, 0, 0.5)' \
+      stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 \
+      7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+#footer {
+  background-color: #ffffff;
+  width: 100%;
+  text-align: center;
+  height: 1rem
+  padding: 0.5rem;
+  border-top: 1px solid rgba(0,0,0,.1);
+/*   margin-top: 2rem; */
+}
+
+#credit {
+  padding: 1rem;
+  margin-top: 1rem;
+  background-color: #f8f9fa;
+}
+
+#logo {
+  border: 1px solid #ffffff;
+  background-color: #ffffff;
+}
+
+/*
+###############################################################################
+    
+    Small Screens
+
+###############################################################################
+*/
+
+#container, #page-container {
+    width: 100%;
+    margin: 0 0 1rem 0;
+    background-color: #d3d3d3;
+}
+
+#sidebar {
+  margin-top: 40px;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+}
+
+#sidebar-toggle {
+  display: none;
+}
+
+#citation {
+  font-size: 12px;
+}
+
+#page-content {
+  padding: 2rem 1rem;
+  background-color: #d3d3d3;
+}
+
+/*
+###############################################################################
+
+    Up to small screens
+
+###############################################################################
+*/
+
+@media (max-width: 769px) {
+    #container, #page-container {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+  #sidebar.collapsed {
+/*     margin-left: -15.5rem;
+    padding-right: 0.5rem; */
+    overflow: visible;
+  }
+
+}
+
+/*
+###############################################################################
+
+    Medium screens
+
+###############################################################################
+*/
+
+@media (min-width: 769px) {
+    
+    #menu-instruction {
+        display: none;
+    }
+
+}
+
+/*
+###############################################################################
+
+    Large screens
+
+###############################################################################
+*/
+
+@media (min-width: 992px) {
+    
+  #footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    padding: 0.5rem;
+  }
+    
+  #sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 2rem;
+    width: 20rem;
+    text-align: left;
+    transition: margin 0.3s ease-in-out, padding 0.3s ease-in-out;
+  }
+
+  #sidebar-toggle {
+    display: inline-block;
+    position: relative;
+    top: 0;
+    transition: top 0.3s ease-in-out;
+  }
+
+  /* add negative margin to sidebar to achieve the collapse */
+  #sidebar.collapsed {
+    margin-left: -15.5rem;
+    padding-right: 0.5rem;
+    overflow: visible;
+  }
+
+  /* move the sidebar toggle up to the top left corner */
+  #sidebar.collapsed #sidebar-toggle {
+    top: -1rem;
+  }
+
+  /* also adjust margin of page content */
+  #sidebar.collapsed ~ #page-content {
+    margin-left: 6.5rem;
+  }
+
+  /* move all contents of navbar other than header (containing toggle) further
+     off-screen */
+  #sidebar.collapsed > *:not(:first-child) {
+    margin-left: -6rem;
+    margin-right: 6rem;
+  }
+
+  /* reveal the blurb on a large screen */
+  #blurb {
+    display: block;
+  }
+
+  /* Hide the toggle on a large screen */
+  #navbar-toggle {
+    display: none;
+  }
+
+  #collapse {
+    display: block;
+  }
+
+  /* set margins of the main content so that it doesn't overlap the sidebar */
+  #page-content {
+    height: 100%;
+    margin-top: 40px;
+    margin-left: 19rem;
+    transition: margin-left 0.3s ease-in-out;
+  }
+}
