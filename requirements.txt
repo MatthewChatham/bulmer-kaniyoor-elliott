@@ -12,3 +12,4 @@ openpyxl
 psycopg2
 # Remove unless JMP regions work out
 scikit-learn
+python-dotenv
