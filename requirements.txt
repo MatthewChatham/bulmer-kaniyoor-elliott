@@ -1,15 +1,19 @@
+# Development
 -e ./src
+python-dotenv
 
-plotly
-numpy
-flask
-gunicorn
+# Dash/Plotly
 dash
+plotly
 dash-bootstrap-components
+dash_daq
+
+# Data Manipulation
+numpy
 pandas
-dash-auth
 openpyxl
 psycopg2
-# Remove unless JMP regions work out
-scikit-learn
-python-dotenv
+
+# Web Server
+flask
+gunicorn
