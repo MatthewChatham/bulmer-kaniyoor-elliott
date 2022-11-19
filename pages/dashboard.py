@@ -14,7 +14,6 @@ import dash_daq as daq
 
 # Other
 import os
-import math
 import pandas as pd
 import numpy as np
 
@@ -22,9 +21,7 @@ import numpy as np
 from src.common import CATEGORY_MAPPER
 from src.db import get_conn, get_dd, get_df
 from src.plotting import MARKERS, construct_fig1, construct_fig2
-from src.benchmarks import (
-    BENCHMARK_COLORS, compute_benchmarks, compute_benchmarks_g2
-)
+from src.benchmarks import (compute_bm_g1, compute_bm_g2)
 from src.filters import generate_filter_control, get_filter_mask
 
 dash.register_page(__name__, path='/')
@@ -656,71 +653,28 @@ def update_charts(
         apply_filters
     )
     
+    bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g1y)
     fig1 = construct_fig1(
         df[mask], 
         g1x, 
         g1y, 
         'Log Y' in g1log,
-        squash='Squash' in g1log
+        squash='Squash' in g1log,
+        bm=bm
     )
 
+    bm = None if 'Show Benchmarks' not in g2log else compute_bm_g2(df, g2x, g2y)
     fig2 = construct_fig2(
         df[mask], 
         x=g2x, 
         y=g2y,
         logx='Log X' in g2log,
         logy='Log Y' in g2log,
-        squash='Squash' in g2log
+        squash='Squash' in g2log,
+        bm=bm
     )
-    
-    # Graph 1 Benchmarks
-    if 'Show Benchmarks' in g1log:
-        benchmarks = compute_benchmarks(df, g1y)
-        for m,v in benchmarks.items():
-            if np.isnan(v):
-                continue
-
-            fig1.add_hline(
-                y=v,
-                line={
-                    'color': BENCHMARK_COLORS[m],
-                    'dash': 'dash'
-                },
-                annotation_text=m, 
-                annotation_position='right',
-                annotation_y=math.log(v,10) if 'Log Y' in g1log else v
-            )
             
-            
-    # todo: Graph 2 Benchmarks
-    if 'Show Benchmarks' in g2log:
-        benchmarks = compute_benchmarks_g2(df, g2x, g2y)
-        bm = pd.DataFrame(benchmarks).T.reset_index()
-        bm.dropna(inplace=True)
-        
-        for i,r in bm.iterrows():
-            fig2.add_trace(
-                go.Scatter(
-                    mode='markers',
-                    x=[r[0]],
-                    y=[r[1]],
-                    marker=dict(
-                        color='black',
-                        size=20,
-                        line=dict(
-                            color='black',
-                            width=2
-                        ),
-                        symbol='x-thin'
-                    ),
-                    showlegend=True,
-                    name=r['index']
-                )
-            )
-            
-    return dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)
-
-
+    return [dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)]
 
 @dash.callback(
     [

@@ -5,7 +5,7 @@ BENCHMARK_COLORS = {
         'SCG': 'black'
     }
 
-def compute_benchmarks(df, y):
+def compute_bm_g1(df, y):
     res = {
         'Copper': None,
         'Iron': None,
@@ -23,7 +23,7 @@ def compute_benchmarks(df, y):
     
     return res
 
-def compute_benchmarks_g2(df, x, y):
+def compute_bm_g2(df, x, y):
     # todo: add aluminum for both benchmarks
     res = {
         'Copper': [],

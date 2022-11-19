@@ -1,6 +1,12 @@
 import plotly.graph_objects as go
 import plotly.express as px
 
+import pandas as pd
+import numpy as np
+import math
+
+from .benchmarks import BENCHMARK_COLORS
+
 MARKERS = {
     'Aligned Few-wall CNTs': {
         'marker_symbol': 'diamond',
@@ -132,7 +138,7 @@ def construct_custom_strip(df, x, y):
     return traces
 
 
-def construct_fig1(df, x, y, log, squash):
+def construct_fig1(df, x, y, log, squash, bm):
     
     df = df[df[x].notnull() & df[y].notnull()]
     
@@ -151,15 +157,6 @@ def construct_fig1(df, x, y, log, squash):
                 line={'color':'black'},
                 customdata=df['Reference'],
                 hovertemplate='%{customdata}'
-                # Don't show or hover on outlier points
-                # marker={'opacity':0},
-                
-                # fillcolor='white',
-                # line={
-                #     'color': 'gray',
-                #     # MARKERS[v]['marker_color'] 
-                #     # if x == 'Category' else 'gray'
-                # }
             )
         )
         
@@ -176,15 +173,27 @@ def construct_fig1(df, x, y, log, squash):
                     marker={'opacity':0},
                     hoveron='boxes',
                     fillcolor='white',
-                    line={
-                        'color': 'gray',
-                        # MARKERS[v]['marker_color'] 
-                        # if x == 'Category' else 'gray'
-                    },
+                    line={'color': 'gray'},
                 )
             )
 
         fig.add_traces(construct_custom_strip(df, x, y))
+        
+    if bm:
+        for m,v in bm.items():
+            if np.isnan(v):
+                continue
+
+            fig.add_hline(
+                y=v,
+                line={
+                    'color': BENCHMARK_COLORS[m],
+                    'dash': 'dash'
+                },
+                annotation_text=m, 
+                annotation_position='right',
+                annotation_y=math.log(v,10) if log else v
+            )
     
     fig.update_yaxes(
         type='log' if log else 'linear',
@@ -199,7 +208,7 @@ def construct_fig1(df, x, y, log, squash):
     
     return fig
 
-def construct_fig2(df, x, y, logx, logy, squash):
+def construct_fig2(df, x, y, logx, logy, squash, bm):
     
     df = df[df[x].notnull() & df[y].notnull()]
     
@@ -223,5 +232,30 @@ def construct_fig2(df, x, y, logx, logy, squash):
     if squash:
         fig.update_traces(marker={'symbol':'circle', 'color':'black'})
         fig.update_layout(showlegend=False)
+        
+        # todo: Graph 2 Benchmarks
+    if bm:
+        bm = pd.DataFrame(bm).T.reset_index()
+        bm.dropna(inplace=True)
+        
+        for i,r in bm.iterrows():
+            fig.add_trace(
+                go.Scatter(
+                    mode='markers',
+                    x=[r[0]],
+                    y=[r[1]],
+                    marker=dict(
+                        color='black',
+                        size=20,
+                        line=dict(
+                            color='black',
+                            width=2
+                        ),
+                        symbol='x-thin'
+                    ),
+                    showlegend=True,
+                    name=r['index']
+                )
+            )
     
     return fig
