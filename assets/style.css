@@ -35,6 +35,11 @@
   background-color: #ffffff;
 }
 
+/* Disable legend traces */
+#graph2 .legend .legendtoggle {
+   display: none;
+}
+
 /*
 ###############################################################################
     
