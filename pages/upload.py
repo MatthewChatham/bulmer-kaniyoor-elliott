@@ -15,7 +15,8 @@ import psycopg2
 import psycopg2.extras as extras
 import os
 
-from src.common import get_conn, clean, get_dd, update_database
+from src.db import get_conn, get_dd, update_database
+from src.upload import clean
 
 dash.register_page(__name__)
 

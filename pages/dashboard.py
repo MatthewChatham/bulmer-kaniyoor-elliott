@@ -17,16 +17,15 @@ import os
 import math
 import pandas as pd
 import numpy as np
-import psycopg2
 
 # Common
-from src.common import (
-    get_dd, get_df,
-    CATEGORY_MAPPER, MARKERS, BENCHMARK_COLORS,
-    construct_fig1, construct_fig2,
-    compute_benchmarks, compute_benchmarks_g2,
-    generate_filter_control, get_filter_mask
+from src.common import CATEGORY_MAPPER
+from src.db import get_conn, get_dd, get_df
+from src.plotting import MARKERS, construct_fig1, construct_fig2
+from src.benchmarks import (
+    BENCHMARK_COLORS, compute_benchmarks, compute_benchmarks_g2
 )
+from src.filters import generate_filter_control, get_filter_mask
 
 dash.register_page(__name__, path='/')
 
