@@ -196,6 +196,82 @@ def serve_sidebar(df):
         ],
         className='my-2'
     )
+    
+    filters = [
+        dbc.Row([
+            dbc.Col(html.H5("Filters"), className='col-auto'), 
+            dbc.Col(daq.BooleanSwitch(id='filters-switch', on=True), className='col-auto')
+        ], className='g-1'),
+        html.Div(
+            id='filter-field-picker-div',
+            children=dcc.Dropdown(
+                [
+                    c for c in df.columns 
+                    if c not in 
+                    ['Category', 'Doped or Acid Exposure (Yes/ No)']
+                ], 
+                [], 
+                multi=True, 
+                placeholder='Pick filter fields', 
+                id='filter-field-picker'
+            )
+        ),
+        filter_modal
+    ]
+    
+    materials = [
+        html.H5('Materials'),
+        html.Div(
+            id='legend-div',
+            children=[
+                dcc.Checklist(
+                    df['Category'].unique(), 
+                    [
+                        c for c in CATEGORY_MAPPER.keys() 
+                         if CATEGORY_MAPPER[c] != 'Other'
+                    ], 
+                    labelStyle={'display': 'block'},
+                    labelClassName='m-1',
+                    style={
+                        "height":300, 
+                    #     "width":350, 
+                        "overflow":"auto",
+                        'border': '1px solid rgba(0,0,0,.1)',
+                    }, 
+                    inputStyle={'margin-right': '2px'},
+                    id='legend',
+                ),
+                html.Div(
+                    [
+                        dbc.Button(
+                            'Toggle all', 
+                            id='legend-toggle-all',
+                            style={'margin-right': '5px'}
+                        ),
+                        dbc.Button(
+                            'Reset', 
+                            id='legend-reset',
+                        ),
+                    ],
+                    className='my-2'
+                )
+            ]
+        )
+    ]
+    
+    doped = [
+        html.H5('Doping'),
+        dcc.Checklist(
+            [
+                {'label': 'Doped', 'value': 'Yes'},
+                {'label': 'Undoped', 'value': 'No'},
+            ],
+            ['Yes', 'No'], 
+            id='dope-control',
+            inputStyle={'margin-right': '2px'},
+            labelClassName='m-1',
+        ),
+    ]
 
     sidebar = html.Div(
         [
@@ -204,88 +280,15 @@ def serve_sidebar(df):
                 children=[
                     
                     html.Em(BLURB),
-                    # citation,
-                    html.Hr(),
-                    dbc.Row([
-                        dbc.Col(html.H5("Filters"), className='col-auto'), 
-                        dbc.Col(daq.BooleanSwitch(id='filters-switch', on=True), className='col-auto')
-                    ], className='g-1'),
-#                     html.P(
-#                         """
-                        
-#                         Select filter fields.
-                        
-#                         \n
-                        
-#                         To reset a filter, remove it from the list.
-                        
-#                         """, 
-#                         className="text-muted"
-#                     ),
-                    html.Div(
-                        id='filter-field-picker-div',
-                        children=dcc.Dropdown(
-                            [
-                                c for c in df.columns 
-                                if c not in 
-                                ['Category', 'Doped or Acid Exposure (Yes/ No)']
-                            ], 
-                            [], 
-                            multi=True, 
-                            placeholder='Pick filter fields', 
-                            id='filter-field-picker'
-                        )
-                    ),
-                    filter_modal,
 
                     html.Hr(),
-                    html.H5('Materials'),
-                    html.Div(
-                        id='legend-div',
-                        children=[
-                            dcc.Checklist(
-                                df['Category'].unique(), 
-                                [
-                                    c for c in CATEGORY_MAPPER.keys() 
-                                     if CATEGORY_MAPPER[c] != 'Other'
-                                ], 
-                                labelStyle={'display': 'block'},
-                                labelClassName='m-1',
-                                style={
-                                    "height":300, 
-                                #     "width":350, 
-                                    "overflow":"auto",
-                                    'border': '1px solid rgba(0,0,0,.1)',
-                                }, 
-                                inputStyle={'margin-right': '2px'},
-                                id='legend',
-                            ),
-                            html.Div(
-                                [
-                                    dbc.Button(
-                                        'Toggle all', 
-                                        id='legend-toggle-all',
-                                        style={'margin-right': '5px'}
-                                    ),
-                                    dbc.Button(
-                                        'Reset', 
-                                        id='legend-reset',
-                                    ),
-                                ],
-                                className='my-2'
-                            )
-                        ]
-                    ),
+                    *filters,
+
+                    html.Hr(),
+                    *materials,
                     
                     html.Hr(),
-                    html.H5('Doped or Acid Exposure'),
-                    dcc.Checklist(
-                        ['Yes', 'No'], 
-                        ['Yes', 'No'], 
-                        id='dope-control',
-                        inputStyle={'margin-right': '2px'},
-                        labelClassName='m-1',
-                    ),
+                    *doped,
                     
                     html.Hr(),                
                     dbc.Button("Update charts", id="update", n_clicks=0)
