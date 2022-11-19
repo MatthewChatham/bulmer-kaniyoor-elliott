@@ -10,6 +10,7 @@ from dash import (
     ALL
 )
 import dash_bootstrap_components as dbc
+import dash_daq as daq
 
 # Other
 import os
@@ -148,17 +149,31 @@ def serve_sidebar(df):
     
     filter_modal = html.Div(
         children =
-        [
-            dbc.Button(
-                "Adjust filters", 
-                id="open", 
-                n_clicks=0, 
-                style={'margin-right': '5px'}
+            [
+                dbc.Row([
+                    dbc.Col(
+                        dbc.Button(
+                            "Adjust filters", 
+                            id="open", 
+                            n_clicks=0, 
+                            style={'margin-right': '5px'}
+                        ),
+                        className='col-auto'
+                    ),
+                    dbc.Col(
+                        dbc.Button("Reset", id="reset-filters", n_clicks=0),
+                        className='col-auto'
+                    )
+                ],
+                className='g-0'
             ),
-            dbc.Button("Reset", id="reset-filters", n_clicks=0),
             dbc.Modal(
                 [
-                    dbc.ModalHeader(dbc.ModalTitle("Filters")),
+                    dbc.ModalHeader(
+                        [
+                            dbc.ModalTitle("Filters")
+                        ]
+                    ),
                     html.Div(
                         html.Em('By default, null values are included.'),
                         style={'padding': '1rem'}
@@ -191,7 +206,10 @@ def serve_sidebar(df):
                     html.Em(BLURB),
                     # citation,
                     html.Hr(),
-                    html.H5("Filters"),
+                    dbc.Row([
+                        dbc.Col(html.H5("Filters"), className='col-auto'), 
+                        dbc.Col(daq.BooleanSwitch(id='filters-switch', on=True), className='col-auto')
+                    ], className='g-1'),
 #                     html.P(
 #                         """
                         
@@ -524,7 +542,8 @@ def get_filter_mask(
     dd,
     ctrl_values, 
     ctrl_idx, 
-    null_values
+    null_values,
+    apply_filters
 ):
     """
     Given a list of `filters`, the `legend` and `dope` controls,
@@ -536,7 +555,7 @@ def get_filter_mask(
     mask = df['Category'].isin(legend) & \
     df['Doped or Acid Exposure (Yes/ No)'].isin(dope)
     
-    if not ctrl_values:
+    if not ctrl_values or not apply_filters:
         return mask
     
     for i,c in enumerate(ctrl_cols):   
@@ -680,6 +699,7 @@ def toggle_modal(n1, n2, is_open):
     [
         State('legend', 'value'), 
         State('dope-control', 'value'),
+        State('filters-switch', 'on'),
         State({'type': 'filter-control', 'column': ALL}, 'value'),
         State({'type': 'filter-control', 'column': ALL}, 'id'),
         State({'type': 'filter-null', 'column': ALL}, 'value'),
@@ -703,7 +723,8 @@ def update_charts(
     n_clicks, 
     # Common
     legend, 
-    dope, 
+    dope,
+    apply_filters,
     ctrl_values,
     ctrl_idx,
     null_values,
@@ -727,15 +748,12 @@ def update_charts(
         df, dd,
         ctrl_values, 
         ctrl_idx, 
-        null_values
+        null_values,
+        apply_filters
     )
     
-    # sort the df to avoid mask effects
-    chartdata = df[mask].sort_index()
-    print(len(chartdata))
-    
     fig1 = construct_fig1(
-        chartdata, 
+        df[mask], 
         g1x, 
         g1y, 
         'Log Y' in g1log,
@@ -743,7 +761,7 @@ def update_charts(
     )
         
     fig2 = construct_fig2(
-        chartdata, 
+        df[mask], 
         x=g2x, 
         y=g2y,
         logx='Log X' in g2log,
@@ -830,3 +848,17 @@ def compute_benchmarks_g2(df, x, y):
     res['Steel'].append(df.loc[mask, y].mean())
     
     return res
+
+@dash.callback(
+    [
+        Output('open', 'disabled'),
+        Output('reset-filters', 'disabled'),
+        Output('filter-field-picker', 'disabled'),
+    ],
+    Input('filters-switch', 'on')
+)
+def toggle_filter_controls(apply_filters):
+    if apply_filters:
+        return [False]*3
+    else:
+        return [True]*3
