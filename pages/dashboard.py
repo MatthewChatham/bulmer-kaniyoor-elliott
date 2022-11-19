@@ -23,7 +23,9 @@ import psycopg2
 from src.common import (
     get_dd, get_df,
     CATEGORY_MAPPER, MARKERS, BENCHMARK_COLORS,
-    construct_fig1, construct_fig2, compute_benchmarks
+    construct_fig1, construct_fig2,
+    compute_benchmarks, compute_benchmarks_g2,
+    generate_filter_control, get_filter_mask
 )
 
 dash.register_page(__name__, path='/')
@@ -475,106 +477,6 @@ def serve_layout():
 
 layout = serve_layout
 
-# ------------------------------ HELPERS --------------------------------------
-#
-#
-# -----------------------------------------------------------------------------
-
-
-def generate_filter_control(c, df, dd, ctrl_value=None, null_value=None):
-    """
-    Given a column name `c`,
-    generate an appropriate filter control based
-    on the column type and values.
-    """
-        
-    control = None
-    res = [
-        html.H6(c),
-        None        
-    ]
-    
-    if dd[c] == 'numeric':
-        
-        rng = [
-            df[c].astype(float).min(),
-            df[c].astype(float).max()
-        ]
-        
-        ctrl_value = ctrl_value if ctrl_value else rng
-        
-        control = dcc.RangeSlider(
-            *rng,
-            value=ctrl_value,
-            id={'type': 'filter-control', 'column': c}
-        )
-    else:
-        
-        ctrl_value = ctrl_value if ctrl_value else df[c].unique()
-        
-        control = dcc.Dropdown(
-            df[c].dropna().unique(),
-            value=ctrl_value,
-            multi=True, 
-            placeholder=c, 
-            id={'type': 'filter-control', 'column': c}
-        )
-    
-    null_value = null_value if null_value is not None else ['Include null']
-    
-    res[1] = dbc.Row([
-        dbc.Col(control, width=8),
-        dbc.Col(dcc.Checklist(
-            ['Include null'], 
-            null_value,
-            inputStyle={'margin-right': '5px'},
-            id={'type': 'filter-null', 'column': c}
-        ), width=4)
-    ])
-        
-    # print('Appending to children:')
-    # print(res)
-        
-    return html.Div(res, style={'margin-top': '1rem'})
-
-
-def get_filter_mask(
-    legend, 
-    dope, 
-    df,
-    dd,
-    ctrl_values, 
-    ctrl_idx, 
-    null_values,
-    apply_filters
-):
-    """
-    Given a list of `filters`, the `legend` and `dope` controls,
-    and a pandas `df`, build a mask.
-    """
-    
-    ctrl_cols = [i['column'] for i in ctrl_idx]
-    
-    mask = df['Category'].isin(legend) & \
-    df['Doped or Acid Exposure (Yes/ No)'].isin(dope)
-    
-    if not ctrl_values or not apply_filters:
-        return mask
-    
-    for i,c in enumerate(ctrl_cols):   
-        if dd[c] == 'numeric':
-            m = df[c].between(*ctrl_values[i])
-            if null_values[i]:
-                m = m | df[c].isnull()
-        else:
-            m = df[c].isin(ctrl_values[i])
-            if null_values[i]:
-                m = m | df[c].isnull()
-        
-        mask = mask & m
-        
-    return mask
-
 # ------------------------------ CALLBACKS ------------------------------------
 #
 #
@@ -762,7 +664,7 @@ def update_charts(
         'Log Y' in g1log,
         squash='Squash' in g1log
     )
-        
+
     fig2 = construct_fig2(
         df[mask], 
         x=g2x, 
@@ -793,11 +695,9 @@ def update_charts(
             
     # todo: Graph 2 Benchmarks
     if 'Show Benchmarks' in g2log:
-        print('entered `if` statement for benchmarks')
         benchmarks = compute_benchmarks_g2(df, g2x, g2y)
         bm = pd.DataFrame(benchmarks).T.reset_index()
         bm.dropna(inplace=True)
-        print(bm)
         
         for i,r in bm.iterrows():
             fig2.add_trace(
@@ -821,36 +721,7 @@ def update_charts(
             
     return dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)
 
-def compute_benchmarks_g2(df, x, y):
-    # todo: add aluminum for both benchmarks
-    res = {
-        'Copper': [],
-        'Iron': [],
-        'SCG': [],
-        'Steel': [],
-    }
-    
-    # Compute X
-    res['Copper'].append(df.loc[df.Notes == 'Copper', x].mean())
-    res['Iron'].append(df.loc[df.Notes == 'Iron', x].mean())
-    
-    mask = df.Notes == 'Single Crystal Graphite'
-    res['SCG'].append(df.loc[mask, x].mean())
-    
-    mask = df.Notes.str.contains('steel', case=False)
-    res['Steel'].append(df.loc[mask, x].mean())
-    
-    # Compute Y
-    res['Copper'].append(df.loc[df.Notes == 'Copper', y].mean())
-    res['Iron'].append(df.loc[df.Notes == 'Iron', y].mean())
-    
-    mask = df.Notes == 'Single Crystal Graphite'
-    res['SCG'].append(df.loc[mask, y].mean())
-    
-    mask = df.Notes.str.contains('steel', case=False)
-    res['Steel'].append(df.loc[mask, y].mean())
-    
-    return res
+
 
 @dash.callback(
     [
