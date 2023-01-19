@@ -121,7 +121,7 @@ def construct_custom_strip(df, x, y):
                 'y': df.loc[mask, y],
                 'name': m, 
                 'marker': markers,
-                'customdata': df['Reference'],
+                'customdata': df.loc[mask, 'Reference'],
             })
 
     # Update (add) trace elements common to all traces.
