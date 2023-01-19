@@ -200,6 +200,13 @@ def construct_fig1(df, x, y, log, squash, bm):
         nticks=10
     )
     
+    if x == 'Category':
+        cat_order = ['Unaligned multiwall CNTs', 'Aligned Multiwall CNTs', 'Unaligned Few-wall CNTs', 
+                     'Aligned Few-wall CNTs', 'Individual Multiwall CNTs', 'Individual Bundle', 'Individual FWCNT', 'Conductive Polymer', 'GIC']
+        # check all cats are present
+        fig.update_xaxes(categoryorder='array', categoryarray=cat_order)
+
+    
     fig.update_layout(
         showlegend=False, 
         yaxis_title=y,
