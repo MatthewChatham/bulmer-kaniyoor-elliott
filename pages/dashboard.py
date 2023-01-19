@@ -46,7 +46,9 @@ wp-content/uploads/2022/03/Logo1-2-768x768.png
 """
 APP_NAME = 'CNT Explorer'
 
-BLURB = """
+BLURB = ""
+
+OLD_BLURB = """
 Carbon nanotubes (CNTs) are a material of the future, with high strength and high
 conductivity. Use the charts to explore data from CNT studies. 
 
@@ -305,7 +307,7 @@ def serve_content(df, dd):
     
     graph1 = html.Div(
         [
-            html.B("Boxplots"),
+            html.B("User-selected property vs CNT category"),
             html.Hr(),
             dbc.Row(
                 [
