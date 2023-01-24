@@ -350,10 +350,19 @@ def serve_content(df, dd):
                 ],
                 className='mb-2'
             ),
-            html.Div(
-                id='graph1', 
-                children=dcc.Graph()
-            )
+            dbc.Row([
+                dbc.Col(
+                    id='graph1', 
+                    children=dcc.Graph(),
+                    md=6
+                ),
+                dbc.Col(
+                    id='graph3',
+                    children=dcc.Graph(),
+                    md=6
+                )
+            ])
+
         ]
     )
 
@@ -595,7 +604,8 @@ def toggle_modal(n1, n2, is_open):
 @dash.callback(
     [
         Output('graph1', 'children'),
-        Output('graph2', 'children')
+        Output('graph2', 'children'),
+        Output('graph3', 'children')
     ],
     Input('update', 'n_clicks'),
     # Common State
@@ -675,8 +685,21 @@ def update_charts(
         squash='Squash' in g2log,
         bm=bm
     )
+    
+    fig3 = construct_fig1(
+        df[mask],
+        'Production Process',
+        g1y,
+        'Log Y' in g1log,
+        squash='Squash' in g1log,
+        bm=bm
+    )
             
-    return [dcc.Graph(figure=fig1), dcc.Graph(figure=fig2)]
+    return [
+        dcc.Graph(figure=fig1), 
+        dcc.Graph(figure=fig2), 
+        dcc.Graph(figure=fig3)
+    ]
 
 @dash.callback(
     [
