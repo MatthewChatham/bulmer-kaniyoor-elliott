@@ -359,7 +359,12 @@ def serve_content(df, dd):
                 )
             ]),
             
-            html.Span('Download data')
+            html.Div(
+                id='graph1table', 
+                children=dash_table.DataTable(
+                    columns=[{"name": i, "id": i} for i in ['X-axis', 'mean', 'max']]
+                )
+            )
         ]
     )
     
@@ -376,7 +381,7 @@ def serve_content(df, dd):
                     dbc.Col(
                         dcc.Dropdown(
                             categorical_cols, 
-                            'Category', 
+                            'Production Process', 
                             multi=False, 
                             placeholder='Pick X-axis', 
                             id='graph3-xaxis-dropdown'
@@ -416,7 +421,14 @@ def serve_content(df, dd):
                     id='graph3',
                     children=dcc.Graph()
                 )
-            ])
+            ]),
+            
+            html.Div(
+                id='graph3table', 
+                children=dash_table.DataTable(
+                    columns=[{"name": i, "id": i} for i in ['X-axis', 'mean', 'max']]
+                )
+            )
             
         ],
         className='mt-3'
@@ -661,11 +673,29 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
+
+def build_graphtable(df, x, y, squash):
+    
+    if squash:
+        res_df = df[y].agg(['mean', 'max']).to_frame().T
+    else:
+        res_df = df.groupby(x)[y].agg(['mean', 'max']).reset_index()
+        
+    print(res_df)
+    
+    return dash_table.DataTable(
+        data=res_df.to_dict('records'),
+        columns=[{"name": i, "id": i} for i in res_df.columns]
+    )
+
+
 @dash.callback(
     [
         Output('graph1', 'children'),
+        Output('graph1table', 'children'),
         Output('graph2', 'children'),
-        Output('graph3', 'children')
+        Output('graph3', 'children'),
+        Output('graph3table', 'children')
     ],
     # Input('update', 'n_clicks'),
     
@@ -678,6 +708,11 @@ def toggle_modal(n1, n2, is_open):
     Input('graph2-xaxis-dropdown', 'value'), 
     Input('graph2-yaxis-dropdown', 'value'),
     Input('graph2-log', 'value'),
+    
+    # Graph 3
+    Input('graph3-xaxis-dropdown', 'value'), 
+    Input('graph3-yaxis-dropdown', 'value'),
+    Input('graph3-log', 'value'),
     
     # Common
     Input('legend', 'value'), 
@@ -703,6 +738,11 @@ def update_charts(
     g2x,
     g2y,
     g2log,
+    
+    # G3
+    g3x,
+    g3y,
+    g3log,
     
     # Common
     legend, 
@@ -752,20 +792,36 @@ def update_charts(
     )
     
     # todo: give its own controls and update here
-    bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g1y)
+    bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g3y)
     fig3 = construct_fig1(
         df[mask],
-        'Production Process',
-        g1y,
-        'Log Y' in g1log,
-        squash='Squash' in g1log,
+        g3x,
+        g3y,
+        'Log Y' in g3log,
+        squash='Squash' in g3log,
         bm=bm
+    )
+    
+    graph1table = build_graphtable(
+        df=df[mask],
+        x=g1x,
+        y=g1y,
+        squash='Squash' in g1log
+    )
+    
+    graph3table = build_graphtable(
+        df=df[mask],
+        x=g3x,
+        y=g3y,
+        squash='Squash' in g3log
     )
             
     return [
-        dcc.Graph(figure=fig1), 
+        dcc.Graph(figure=fig1),
+        graph1table,
         dcc.Graph(figure=fig2), 
-        dcc.Graph(figure=fig3)
+        dcc.Graph(figure=fig3),
+        graph3table
     ]
 
 @dash.callback(
