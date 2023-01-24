@@ -290,8 +290,8 @@ def serve_sidebar(df):
                     html.Hr(),
                     *doped,
                     
-                    html.Hr(),                
-                    dbc.Button("Update charts", id="update", n_clicks=0)
+                    # html.Hr(),                
+                    # dbc.Button("Update charts", id="update", n_clicks=0)
                 ],
                 id="collapse",
             )
@@ -307,8 +307,9 @@ def serve_content(df, dd):
     
     graph1 = html.Div(
         [
+            
+            # Graph 1
             html.B("User-selected property vs CNT category"),
-            html.Hr(),
             dbc.Row(
                 [
 
@@ -350,26 +351,83 @@ def serve_content(df, dd):
                 ],
                 className='mb-2'
             ),
+            
             dbc.Row([
                 dbc.Col(
                     id='graph1', 
-                    children=dcc.Graph(),
-                    md=6
-                ),
+                    children=dcc.Graph()
+                )
+            ]),
+            
+            html.Span('Download data')
+        ]
+    )
+    
+    graph3 = html.Div(
+    
+        [
+            
+            # Graph 3
+            html.Hr(),
+            html.B("User-selected property vs Production Process"),
+            dbc.Row(
+                [
+
+                    dbc.Col(
+                        dcc.Dropdown(
+                            categorical_cols, 
+                            'Category', 
+                            multi=False, 
+                            placeholder='Pick X-axis', 
+                            id='graph3-xaxis-dropdown'
+                        ),
+                        md=3,
+                        sm=6
+                    ),
+                    dbc.Col(
+                        dcc.Dropdown(
+                            numeric_cols, 
+                            'Conductivity (MSm-1)', 
+                            multi=False, 
+                            placeholder='Pick Y-axis', 
+                            id='graph3-yaxis-dropdown'
+                        ),
+                        md=3,
+                        sm=6
+                    ),
+                    dbc.Col(
+                        dcc.Checklist(
+                            ['Log Y', 'Squash', 'Show Benchmarks'], 
+                            ['Log Y'], 
+                            id='graph3-log',
+                            inline=True,
+                            inputStyle={'margin-right': '5px'},
+                            labelStyle={'margin-right': '10px'}
+                        ),
+                        md=6,
+                        sm=7,
+                        className='pt-2'
+                    )
+                ],
+                className='mb-2'
+            ),
+            dbc.Row([
                 dbc.Col(
                     id='graph3',
-                    children=dcc.Graph(),
-                    md=6
+                    children=dcc.Graph()
                 )
             ])
-
-        ]
+            
+        ],
+        className='mt-3'
+        
+    
     )
 
     graph2 = html.Div(
         [
-            html.B("Scatterplot"),
             html.Hr(),
+            html.B("Scatterplot"),
             dbc.Row(
                 [
                     dbc.Col(
@@ -423,7 +481,9 @@ def serve_content(df, dd):
         id="page-content",
         children=[
             graph1,
+            graph3,
             graph2,
+            # todo: credit
             # html.Div(
             #     id='credit',
             #     children='Made by MC using Dash'
@@ -607,33 +667,43 @@ def toggle_modal(n1, n2, is_open):
         Output('graph2', 'children'),
         Output('graph3', 'children')
     ],
-    Input('update', 'n_clicks'),
-    # Common State
-    [
-        State('legend', 'value'), 
-        State('dope-control', 'value'),
-        State('filters-switch', 'on'),
-        State({'type': 'filter-control', 'column': ALL}, 'value'),
-        State({'type': 'filter-control', 'column': ALL}, 'id'),
-        State({'type': 'filter-null', 'column': ALL}, 'value'),
-        State('df', 'data'),
-        State('dd', 'data')
-    ],
-    # Graph 1 State
-    [
-        State('graph1-xaxis-dropdown', 'value'), 
-        State('graph1-yaxis-dropdown', 'value'), 
-        State('graph1-log', 'value')
-    ],
-    # Graph 2 State
-    [
-        State('graph2-xaxis-dropdown', 'value'), 
-        State('graph2-yaxis-dropdown', 'value'),
-        State('graph2-log', 'value'),
-    ]
+    # Input('update', 'n_clicks'),
+    
+    # Graph 1
+    Input('graph1-xaxis-dropdown', 'value'),
+    Input('graph1-yaxis-dropdown', 'value'), 
+    Input('graph1-log', 'value'),
+    
+    # Graph 2
+    Input('graph2-xaxis-dropdown', 'value'), 
+    Input('graph2-yaxis-dropdown', 'value'),
+    Input('graph2-log', 'value'),
+    
+    # Common
+    Input('legend', 'value'), 
+    Input('dope-control', 'value'),
+    Input('filters-switch', 'on'),
+    Input({'type': 'filter-control', 'column': ALL}, 'value'),
+    Input({'type': 'filter-control', 'column': ALL}, 'id'),
+    Input({'type': 'filter-null', 'column': ALL}, 'value'),
+    
+    # Data
+    State('df', 'data'),
+    State('dd', 'data')
 )
 def update_charts(
-    n_clicks, 
+    # n_clicks,
+    
+    # G1
+    g1x,
+    g1y, 
+    g1log,
+    
+    # G2
+    g2x,
+    g2y,
+    g2log,
+    
     # Common
     legend, 
     dope,
@@ -641,16 +711,11 @@ def update_charts(
     ctrl_values,
     ctrl_idx,
     null_values,
+    
+    # Data
     df,
-    dd,
-    # G1
-    g1x, 
-    g1y, 
-    g1log,
-    # G2
-    g2x,
-    g2y,
-    g2log
+    dd
+
 ):
         
     df = pd.DataFrame.from_dict(df)
@@ -686,6 +751,8 @@ def update_charts(
         bm=bm
     )
     
+    # todo: give its own controls and update here
+    bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g1y)
     fig3 = construct_fig1(
         df[mask],
         'Production Process',

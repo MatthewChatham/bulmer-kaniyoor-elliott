@@ -240,7 +240,10 @@ def construct_fig2(df, x, y, logx, logy, squash, bm):
         fig.update_traces(marker={'symbol':'circle', 'color':'black'})
         fig.update_layout(showlegend=False)
         
-        # todo: Graph 2 Benchmarks
+    
+    # todo: open markers for undoped
+        
+    # todo: Graph 2 Benchmarks
     if bm:
         bm = pd.DataFrame(bm).T.reset_index()
         bm.dropna(inplace=True)
