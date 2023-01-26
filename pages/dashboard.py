@@ -16,6 +16,7 @@ import dash_daq as daq
 import os
 import pandas as pd
 import numpy as np
+import scipy.stats as stats
 
 # Common
 from src.common import CATEGORY_MAPPER
@@ -483,6 +484,12 @@ def serve_content(df, dd):
             html.Div(
                 id='graph2', 
                 children=dcc.Graph()
+            ),
+            html.Div(
+                id='graph2table', 
+                children=dash_table.DataTable(
+                    columns=[{"name": i, "id": i} for i in ['Category', 'correlation', 'p-value']]
+                )
             )
         ],
         className='mt-3'
@@ -688,12 +695,53 @@ def build_graphtable(df, x, y, squash):
         columns=[{"name": i, "id": i} for i in res_df.columns]
     )
 
+def build_graph2table(df, x, y, squash):
+    
+    records = list()
+    
+    mask = df[x].notnull() & df[y].notnull()
+    # correlation requires non-null data
+    df = df[mask]
+    
+    if not squash:
+    
+        for c in df['Category'].unique():
+            m = df.Category == c
+
+            # todo: check this matches paper
+            r = stats.pearsonr(
+                np.log1p(df[mask & m][x]), 
+                np.log1p(df[mask & m][y])
+            )
+            r = list(r)
+            r.insert(0, c)
+            records.append(r)
+            
+    else:
+        
+        r = stats.pearsonr(
+            np.log1p(df[mask][x]), 
+            np.log1p(df[mask][y])
+        )
+        r = list(r)
+        r.insert(0, 'All')
+        records.append(r)
+        
+        
+    res_df = pd.DataFrame(records, columns=['Category', 'Correlation', 'P-Value'])
+    
+    return dash_table.DataTable(
+        data=res_df.to_dict('records'),
+        columns=[{"name": i, "id": i} for i in res_df.columns]
+    )
+
 
 @dash.callback(
     [
         Output('graph1', 'children'),
         Output('graph1table', 'children'),
         Output('graph2', 'children'),
+        Output('graph2table', 'children'),
         Output('graph3', 'children'),
         Output('graph3table', 'children')
     ],
@@ -815,11 +863,19 @@ def update_charts(
         y=g3y,
         squash='Squash' in g3log
     )
+    
+    graph2table = build_graph2table(
+        df=df[mask],
+        x=g2x,
+        y=g2y,
+        squash='Squash' in g2log
+    )
             
     return [
         dcc.Graph(figure=fig1),
         graph1table,
-        dcc.Graph(figure=fig2), 
+        dcc.Graph(figure=fig2),
+        graph2table,
         dcc.Graph(figure=fig3),
         graph3table
     ]

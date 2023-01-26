@@ -4,6 +4,7 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 import math
+from sklearn.linear_model import LinearRegression
 
 from .benchmarks import BENCHMARK_COLORS
 
@@ -236,14 +237,49 @@ def construct_fig2(df, x, y, logx, logy, squash, bm):
         hover_data=['Reference']
     )
     
-    if squash:
-        fig.update_traces(marker={'symbol':'circle', 'color':'black'})
-        fig.update_layout(showlegend=False)
+    if not squash:
+    
+        for c in df.Category.unique():
+            m = df.Category == c
+
+            # compute linear regression
+            lm = LinearRegression()
+            lm.fit(
+                np.log10(df[m][x].array.reshape(-1, 1)), 
+                np.log10(df[m][y].array.reshape(-1, 1))
+            )
+            # construct line
+            a, b = lm.coef_[0], lm.intercept_
+            x_vals = np.linspace(df[m][x].min(), df[m][x].max())
+            y_vals = 10**(a*np.log10(x_vals) + b)
+            cats = [c]*len(x_vals)
+            a_vals = [a]*len(x_vals)
+            b_vals = [b]*len(x_vals)
+            chartdata = pd.DataFrame(dict(Category=cats, x=x_vals, y=y_vals, a=a_vals, b=b_vals))
+            fig.add_traces(list(px.line(data_frame=chartdata, x='x', y='y', color='Category', color_discrete_map=color_map, hover_data=['a', 'b']).select_traces()))
+            
+    else:
+        
+        # compute linear regression
+        lm = LinearRegression()
+        lm.fit(
+            np.log10(df[x].array.reshape(-1, 1)), 
+            np.log10(df[y].array.reshape(-1, 1))
+        )
+        # construct line
+        a, b = lm.coef_[0], lm.intercept_
+        x_vals = np.linspace(df[x].min(), df[x].max())
+        y_vals = 10**(a*np.log10(x_vals) + b)
+        fig.add_traces(list(px.line(x=x_vals, y=y_vals).select_traces()))
         
     
-    # todo: open markers for undoped
-        
-    # todo: Graph 2 Benchmarks
+    # fig.add_traces(line_traces)
+    
+    if squash:
+        # todo: open markers for undoped
+        fig.update_traces(marker={'symbol':'circle', 'color':'black'})
+        fig.update_layout(showlegend=False)
+
     if bm:
         bm = pd.DataFrame(bm).T.reset_index()
         bm.dropna(inplace=True)
