@@ -273,6 +273,59 @@ def serve_sidebar(df):
             labelClassName='m-1',
         ),
     ]
+    
+    open_search = dbc.Button(
+        "Find your paper", 
+        id="open-search", 
+        n_clicks=0, 
+        style={'margin-right': '5px'}
+    )
+    
+    search_bar = dcc.Dropdown(
+        df['Reference'].unique(), 
+        [], 
+        multi=True, 
+        placeholder='Search papers', 
+        id='search-bar'
+    )
+    
+    link = html.A('here', href='https://idlewildtech.com/contact/')
+    contact = html.Div(
+        children=[
+            'Don\'t see your paper? Contact us ', 
+            link,
+            ' to request an addition.'
+        ],
+        className='mt-3'
+    )
+    
+    paper_search = dbc.Modal(
+        [
+            dbc.ModalHeader(
+                [
+                    dbc.ModalTitle("Search for your paper")
+                ]
+            ),
+            dbc.ModalBody([
+                search_bar,
+                contact
+            ]),
+            dbc.ModalFooter(
+                dbc.Button(
+                    "Close", 
+                    id="close-search", 
+                    className="ms-auto", 
+                    n_clicks=0
+                )
+            ),
+        ],
+        id="search-modal",
+        size='lg',
+        is_open=False,
+        fullscreen=False
+    )
+    
+    
 
     sidebar = html.Div(
         [
@@ -291,8 +344,9 @@ def serve_sidebar(df):
                     html.Hr(),
                     *doped,
                     
-                    # html.Hr(),                
-                    # dbc.Button("Update charts", id="update", n_clicks=0)
+                    open_search,
+                    paper_search
+                    
                 ],
                 id="collapse",
             )
@@ -674,6 +728,19 @@ def display_filter_controls(
         Input("close", "n_clicks")
     ],
     [State("filter-modal", "is_open")],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
+
+@dash.callback(
+    Output("search-modal", "is_open"),
+    [
+        Input("open-search", "n_clicks"), 
+        Input("close-search", "n_clicks")
+    ],
+    [State("search-modal", "is_open")],
 )
 def toggle_modal(n1, n2, is_open):
     if n1 or n2:

@@ -1,7 +1,9 @@
 from dash import Dash, page_container, html
 import dash_bootstrap_components as dbc
 
-meta = {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+meta = {
+    "name": "viewport", 
+    "content": "width=device-width, initial-scale=1"}
 
 app = Dash(
     __name__, 
