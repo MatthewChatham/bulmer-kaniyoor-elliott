@@ -8,11 +8,12 @@ plotly
 dash-bootstrap-components
 dash_daq
 
-# Data Manipulation
+# Data Manipulation/Analysis
 numpy
 pandas
 openpyxl
 psycopg2
+scipy
 
 # Web Server
 flask
