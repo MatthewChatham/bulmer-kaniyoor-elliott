@@ -14,6 +14,7 @@ pandas
 openpyxl
 psycopg2
 scipy
+sklearn
 
 # Web Server
 flask
