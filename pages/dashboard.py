@@ -25,7 +25,7 @@ from src.plotting import MARKERS, construct_fig1, construct_fig2
 from src.benchmarks import (compute_bm_g1, compute_bm_g2)
 from src.filters import generate_filter_control, get_filter_mask
 
-dash.register_page(__name__, path='/')
+dash.register_page(__name__, path='/explore')
 
 
 # -------------------------- CONSTANTS & STYLE --------------------------------
@@ -172,7 +172,7 @@ def serve_sidebar(df):
                 [
                     dbc.ModalHeader(
                         [
-                            dbc.ModalTitle("Filters")
+                            dbc.ModalTitle("Additional Filters")
                         ]
                     ),
                     html.Div(
@@ -198,19 +198,47 @@ def serve_sidebar(df):
         className='my-2'
     )
     
+    filter_cols = [
+        
+        'Alignment method',
+        'FWHM type',
+        'Production Process',
+        'Intentionally added intercalation dope',
+        'Sorted Status',
+        'Conductivity (MSm-1)',
+        'Specific Conductivity (kS m2/kg)',
+        'Tensile Strength (MPa)',
+        'Specific Strength (N/Tex)',
+        'Young\'s Modulus (GPa)',
+        'Thermal Conductivity (W/(m K))',
+        'Probe separation for Ampacity (microns)',
+        'Effective diameter for ampacity (nm)',
+        'Uber Parameter',
+        'Specific Uber Parameter',
+        'Plottable CNT Diameter (nm)',
+        'Raman G:D',
+        'Raman wavelength',
+        'G Peak Position (cm-1)',
+        'R(300K)/R(4.2K)',
+        'R(300K)/R(10K)',
+        'Alignment FWHM',
+        'Alignment figure of merit',
+        'Electrical Anisotropy',
+        'Bulk Fiber Diameter (microns)',
+        'Host Conductivity (MSm-1)',
+        'Year'
+        
+    ]
+    
     filters = [
         dbc.Row([
-            dbc.Col(html.H5("Filters"), className='col-auto'), 
+            dbc.Col(html.H5("Additional Filters"), className='col-auto'), 
             dbc.Col(daq.BooleanSwitch(id='filters-switch', on=True), className='col-auto')
         ], className='g-1'),
         html.Div(
             id='filter-field-picker-div',
             children=dcc.Dropdown(
-                [
-                    c for c in df.columns 
-                    if c not in 
-                    ['Category', 'Doped or Acid Exposure (Yes/ No)']
-                ], 
+                filter_cols, 
                 [], 
                 multi=True, 
                 placeholder='Pick filter fields', 
@@ -220,16 +248,40 @@ def serve_sidebar(df):
         filter_modal
     ]
     
+    mat_ops = [
+        
+        'Unaligned multiwall CNTs',
+        'Unaligned Few-wall CNTs',
+        'Aligned Multiwall CNTs',
+        'Aligned Few-wall CNTs',
+        'Individual Bundle',
+        'Individual Multiwall CNTs',
+        'Individual FWCNT',
+        'Carbon Fiber',
+        'Single crystal graphite',
+        'GIC',
+        'Conductive Polymer',
+        'Metal',
+        'Synthetic fiber'
+        
+    ]
+    
     materials = [
         html.H5('Materials'),
         html.Div(
             id='legend-div',
             children=[
                 dcc.Checklist(
-                    df['Category'].unique(), 
+                    mat_ops, 
                     [
                         c for c in CATEGORY_MAPPER.keys() 
                          if CATEGORY_MAPPER[c] != 'Other'
+                             
+                             and c not in ['Single crystal graphite', 
+                             'Unaligned multiwall CNTs',
+                             'Unaligned Few-wall CNTs',
+                             'Conductive Polymer'
+                         ]
                     ], 
                     labelStyle={'display': 'block'},
                     labelClassName='m-1',
@@ -336,13 +388,13 @@ def serve_sidebar(df):
                     html.Em(BLURB),
 
                     html.Hr(),
-                    *filters,
+                    *doped,
 
                     html.Hr(),
                     *materials,
                     
                     html.Hr(),
-                    *doped,
+                    *filters,
                     
                     open_search,
                     paper_search
@@ -359,6 +411,32 @@ def serve_sidebar(df):
 def serve_content(df, dd):
     numeric_cols = [c for c in df.columns if dd[c] == 'numeric']
     categorical_cols = [c for c in df.columns if dd[c] != 'numeric']
+    
+    graph1_y_dropdown = [
+        'Conductivity (MSm-1)',
+        'Specific Conductivity (kS m2/kg)',
+        'Tensile Strength (MPa)',
+        'Specific Strength (N/Tex)',
+        'Young\'s Modulus (GPa)',
+        'Thermal Conductivity (W/(m K))',
+        'Probe separation for Ampacity (microns)',
+        'Effective diameter for ampacity (nm)',
+        'Uber Parameter',
+        'Specific Uber Parameter',
+        'Plottable CNT Diameter (nm)',
+        'Raman G:D',
+        'Raman wavelength',
+        'G Peak Position (cm-1)',
+        'R(300K)/R(4.2K)',
+        'R(300K)/R(10K)',
+        'Alignment FWHM',
+        'Alignment figure of merit',
+        'Electrical Anisotropy',
+        'Bulk Fiber Diameter (microns)',
+        'Host Conductivity (MSm-1)',
+        'Year'
+    ]
+    
     
     graph1 = html.Div(
         [
@@ -381,7 +459,7 @@ def serve_content(df, dd):
                     ),
                     dbc.Col(
                         dcc.Dropdown(
-                            numeric_cols, 
+                            graph1_y_dropdown, 
                             'Conductivity (MSm-1)', 
                             multi=False, 
                             placeholder='Pick Y-axis', 
@@ -393,7 +471,7 @@ def serve_content(df, dd):
                     dbc.Col(
                         dcc.Checklist(
                             ['Log Y', 'Squash', 'Show Benchmarks'], 
-                            ['Log Y'], 
+                            ['Log Y', 'Show Benchmarks'], 
                             id='graph1-log',
                             inline=True,
                             inputStyle={'margin-right': '5px'},
@@ -423,83 +501,16 @@ def serve_content(df, dd):
         ]
     )
     
-    graph3 = html.Div(
-    
-        [
-            
-            # Graph 3
-            html.Hr(),
-            html.B("User-selected property vs Production Process"),
-            dbc.Row(
-                [
-
-                    dbc.Col(
-                        dcc.Dropdown(
-                            categorical_cols, 
-                            'Production Process', 
-                            multi=False, 
-                            placeholder='Pick X-axis', 
-                            id='graph3-xaxis-dropdown'
-                        ),
-                        md=3,
-                        sm=6
-                    ),
-                    dbc.Col(
-                        dcc.Dropdown(
-                            numeric_cols, 
-                            'Conductivity (MSm-1)', 
-                            multi=False, 
-                            placeholder='Pick Y-axis', 
-                            id='graph3-yaxis-dropdown'
-                        ),
-                        md=3,
-                        sm=6
-                    ),
-                    dbc.Col(
-                        dcc.Checklist(
-                            ['Log Y', 'Squash', 'Show Benchmarks'], 
-                            ['Log Y'], 
-                            id='graph3-log',
-                            inline=True,
-                            inputStyle={'margin-right': '5px'},
-                            labelStyle={'margin-right': '10px'}
-                        ),
-                        md=6,
-                        sm=7,
-                        className='pt-2'
-                    )
-                ],
-                className='mb-2'
-            ),
-            dbc.Row([
-                dbc.Col(
-                    id='graph3',
-                    children=dcc.Graph()
-                )
-            ]),
-            
-            html.Div(
-                id='graph3table', 
-                children=dash_table.DataTable(
-                    columns=[{"name": i, "id": i} for i in ['X-axis', 'mean', 'max']]
-                )
-            )
-            
-        ],
-        className='mt-3'
-        
-    
-    )
 
     graph2 = html.Div(
         [
             html.Hr(),
-            html.B("Scatterplot"),
+            html.B("Selectable material property vs Selectable material property"),
             dbc.Row(
                 [
                     dbc.Col(
                         dcc.Dropdown(
-                            numeric_cols, 
+                            graph1_y_dropdown, 
                             'Tensile Strength (MPa)', 
                             multi=False, 
                             placeholder='Pick X-axis', 
@@ -510,7 +521,7 @@ def serve_content(df, dd):
                     ),
                     dbc.Col(
                         dcc.Dropdown(
-                            numeric_cols, 
+                            graph1_y_dropdown, 
                             'Conductivity (MSm-1)', 
                             multi=False, 
                             placeholder='Pick Y-axis', 
@@ -554,7 +565,6 @@ def serve_content(df, dd):
         id="page-content",
         children=[
             graph1,
-            graph3,
             graph2,
             # todo: credit
             # html.Div(
@@ -755,7 +765,8 @@ def build_graphtable(df, x, y, squash):
     else:
         res_df = df.groupby(x)[y].agg(['mean', 'max']).reset_index()
         
-    print(res_df)
+    res_df = res_df.round(2)
+        
     
     return dash_table.DataTable(
         data=res_df.to_dict('records'),
@@ -772,8 +783,13 @@ def build_graph2table(df, x, y, squash):
     
     if not squash:
     
-        for c in df['Category'].unique():
+        for c in df['Category'].unique():            
             m = df.Category == c
+            
+            if max(len(df[mask & m][x]), len(df[mask & m][y])) < 2:
+                continue
+
+            
 
             # todo: check this matches paper
             r = stats.pearsonr(
@@ -797,6 +813,10 @@ def build_graph2table(df, x, y, squash):
         
     res_df = pd.DataFrame(records, columns=['Category', 'Correlation', 'P-Value'])
     
+    where_p_lt_05 = res_df['P-Value'] < 0.05
+    res_df = res_df.round(2)
+    res_df.loc[where_p_lt_05, 'P-Value'] = '<0.05'
+    
     return dash_table.DataTable(
         data=res_df.to_dict('records'),
         columns=[{"name": i, "id": i} for i in res_df.columns]
@@ -808,9 +828,7 @@ def build_graph2table(df, x, y, squash):
         Output('graph1', 'children'),
         Output('graph1table', 'children'),
         Output('graph2', 'children'),
-        Output('graph2table', 'children'),
-        Output('graph3', 'children'),
-        Output('graph3table', 'children')
+        Output('graph2table', 'children')
     ],
     # Input('update', 'n_clicks'),
     
@@ -823,11 +841,6 @@ def build_graph2table(df, x, y, squash):
     Input('graph2-xaxis-dropdown', 'value'), 
     Input('graph2-yaxis-dropdown', 'value'),
     Input('graph2-log', 'value'),
-    
-    # Graph 3
-    Input('graph3-xaxis-dropdown', 'value'), 
-    Input('graph3-yaxis-dropdown', 'value'),
-    Input('graph3-log', 'value'),
     
     # Common
     Input('legend', 'value'), 
@@ -853,11 +866,6 @@ def update_charts(
     g2x,
     g2y,
     g2log,
-    
-    # G3
-    g3x,
-    g3y,
-    g3log,
     
     # Common
     legend, 
@@ -906,29 +914,11 @@ def update_charts(
         bm=bm
     )
     
-    # todo: give its own controls and update here
-    bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g3y)
-    fig3 = construct_fig1(
-        df[mask],
-        g3x,
-        g3y,
-        'Log Y' in g3log,
-        squash='Squash' in g3log,
-        bm=bm
-    )
-    
     graph1table = build_graphtable(
         df=df[mask],
         x=g1x,
         y=g1y,
         squash='Squash' in g1log
-    )
-    
-    graph3table = build_graphtable(
-        df=df[mask],
-        x=g3x,
-        y=g3y,
-        squash='Squash' in g3log
     )
     
     graph2table = build_graph2table(
@@ -942,9 +932,7 @@ def update_charts(
         dcc.Graph(figure=fig1),
         graph1table,
         dcc.Graph(figure=fig2),
-        graph2table,
-        dcc.Graph(figure=fig3),
-        graph3table
+        graph2table
     ]
 
 @dash.callback(

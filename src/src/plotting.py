@@ -204,7 +204,8 @@ def construct_fig1(df, x, y, log, squash, bm):
     if x == 'Category':
         cat_order = ['Unaligned multiwall CNTs', 'Aligned Multiwall CNTs', 'Unaligned Few-wall CNTs', 
                      'Aligned Few-wall CNTs', 'Individual Multiwall CNTs', 'Individual Bundle', 'Individual FWCNT', 'Conductive Polymer', 'GIC']
-        # check all cats are present
+        cat_order = [c for c in cat_order if c in df[x].unique()]
+        print('CAT ORDER', cat_order)
         fig.update_xaxes(categoryorder='array', categoryarray=cat_order)
 
     
@@ -250,13 +251,29 @@ def construct_fig2(df, x, y, logx, logy, squash, bm):
             )
             # construct line
             a, b = lm.coef_[0], lm.intercept_
-            x_vals = np.linspace(df[m][x].min(), df[m][x].max())
+            print('DECIMAL', df[m][x].min(), df[m][x].max())
+            x_vals = np.linspace(float(df[m][x].min()), float(df[m][x].max()))
             y_vals = 10**(a*np.log10(x_vals) + b)
             cats = [c]*len(x_vals)
             a_vals = [a]*len(x_vals)
             b_vals = [b]*len(x_vals)
             chartdata = pd.DataFrame(dict(Category=cats, x=x_vals, y=y_vals, a=a_vals, b=b_vals))
-            fig.add_traces(list(px.line(data_frame=chartdata, x='x', y='y', color='Category', color_discrete_map=color_map, hover_data=['a', 'b']).select_traces()))
+            
+            
+            line_fig = px.line(
+                data_frame=chartdata, 
+                x='x', 
+                y='y', 
+                color='Category', 
+                color_discrete_map=color_map, 
+                hover_data=['a', 'b'],
+            )
+            line_fig.update_traces(showlegend=False)
+            # line_fig.update_layout(showlegend=False)
+            line_traces = list(line_fig.select_traces())
+            print(line_traces)
+            
+            fig.add_traces(line_traces)
             
     else:
         
