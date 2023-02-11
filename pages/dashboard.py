@@ -775,6 +775,11 @@ def legend_buttons(n_clicks, n_clicks2, options, value):
         return [
             c for c in CATEGORY_MAPPER.keys() 
              if CATEGORY_MAPPER[c] != 'Other'
+            and c not in ['Single crystal graphite', 
+                             'Unaligned multiwall CNTs',
+                             'Unaligned Few-wall CNTs',
+                             'Conductive Polymer'
+                         ]
         ]
 
 @dash.callback(
