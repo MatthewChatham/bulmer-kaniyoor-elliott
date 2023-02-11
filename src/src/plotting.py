@@ -224,11 +224,11 @@ def construct_fig2(df, x, y, logx, logy, squash, bm):
     symbol = color = 'Category'
     symbol_map = {k:v['marker_symbol'] for k,v in MARKERS.items()}
     color_map = {k:v['marker_color'] for k,v in MARKERS.items()}
-    
+
     fig = px.scatter(
         df,
-        x=x, 
-        y=y, 
+        x=x,
+        y=y,
         log_x=logx, 
         log_y=logy,
         symbol=symbol,
@@ -237,7 +237,7 @@ def construct_fig2(df, x, y, logx, logy, squash, bm):
         color_discrete_map=color_map,
         hover_data=['Reference']
     )
-    
+
     if not squash:
     
         for c in df.Category.unique():

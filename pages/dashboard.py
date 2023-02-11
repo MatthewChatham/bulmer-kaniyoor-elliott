@@ -389,7 +389,10 @@ def serve_sidebar(df):
                     *materials,
                     
                     html.Hr(),
-                    *filters
+                    *filters,
+                    
+                    html.Hr(),
+                    html.A('GitHub repository', href='https://github.com/MatthewChatham/bulmer-kaniyoor-elliott')
                     
                 ],
                 id="collapse",
@@ -659,7 +662,7 @@ def serve_content(df, dd):
             graph2,
             graph3,
             find_your_paper,
-            download
+            download,
             # todo: credit
             # html.Div(
             #     id='credit',
