@@ -24,21 +24,23 @@ def get_dd():
     
     return dd
 
-def get_df():
+def get_df(original=None):
     conn = get_conn()
+    
+    tbl_name = 'df' if not original else 'df_original'
     
     with conn, conn.cursor() as cur:
         # get df column names
-        cur.execute("""
+        cur.execute(f"""
         SELECT column_name
           FROM information_schema.columns
          WHERE table_schema = 'public'
-           AND table_name   = 'df'
+           AND table_name   = '{tbl_name}'
              ;
         """)
         cols = [x[0] for x in cur.fetchall()]
 
-        cur.execute('select * from df;')
+        cur.execute(f'select * from {tbl_name};')
         df = pd.DataFrame(cur.fetchall(), columns=cols)
         
     conn.close()

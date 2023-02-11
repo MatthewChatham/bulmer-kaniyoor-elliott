@@ -17,6 +17,7 @@ import os
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
+import time
 
 # Common
 from src.common import CATEGORY_MAPPER
@@ -25,7 +26,7 @@ from src.plotting import MARKERS, construct_fig1, construct_fig2
 from src.benchmarks import (compute_bm_g1, compute_bm_g2)
 from src.filters import generate_filter_control, get_filter_mask
 
-dash.register_page(__name__, path='/explore')
+dash.register_page(__name__, path='/')
 
 
 # -------------------------- CONSTANTS & STYLE --------------------------------
@@ -111,7 +112,7 @@ def serve_sidebar(df):
                 [
                     html.Button(
                         # use the Bootstrap navbar-toggler classes to style
-                        html.Span(className="navbar-toggler-icon"),
+                        html.Img(src='assets/filter.svg', className='navbar-toggler-icon'),
                         className="navbar-toggler",
                         # the navbar-toggler classes don't set color
                         style={
@@ -122,7 +123,8 @@ def serve_sidebar(df):
                     ),
                     html.Button(
                         # use the Bootstrap navbar-toggler classes to style
-                        html.Span(className="navbar-toggler-icon"),
+                        # html.Span(className="navbar-toggler-icon"),
+                        html.Img(src='assets/filter.svg', className='navbar-toggler-icon'),
                         className="navbar-toggler",
                         # the navbar-toggler classes don't set color
                         style={
@@ -130,13 +132,6 @@ def serve_sidebar(df):
                             "border-color": "rgba(0,0,0,.1)",
                         },
                         id="sidebar-toggle",
-                    ),
-                    html.Div(
-                        html.Em(
-                            'Open for filters',
-                            style={'font-size': '10px', 'position': 'relative'}
-                        ),
-                        id='menu-instruction'
                     )
                 ],
                 # the column containing the toggle will be only as wide as the
@@ -394,16 +389,14 @@ def serve_sidebar(df):
                     *materials,
                     
                     html.Hr(),
-                    *filters,
-                    
-                    open_search,
-                    paper_search
+                    *filters
                     
                 ],
                 id="collapse",
             )
         ],
-        id="sidebar"
+        id="sidebar",
+        className='collapsed'
     )
     
     return sidebar
@@ -442,21 +435,10 @@ def serve_content(df, dd):
         [
             
             # Graph 1
-            html.B("User-selected property vs CNT category"),
+            html.B("Selectable material property vs carbon category"),
             dbc.Row(
                 [
 
-                    dbc.Col(
-                        dcc.Dropdown(
-                            categorical_cols, 
-                            'Category', 
-                            multi=False, 
-                            placeholder='Pick X-axis', 
-                            id='graph1-xaxis-dropdown'
-                        ),
-                        md=3,
-                        sm=6
-                    ),
                     dbc.Col(
                         dcc.Dropdown(
                             graph1_y_dropdown, 
@@ -551,11 +533,120 @@ def serve_content(df, dd):
                 children=dcc.Graph()
             ),
             html.Div(
-                id='graph2table', 
-                children=dash_table.DataTable(
+                className='mt-2',
+                children=[
+                    html.Em('Correlation Tables Log(x) vs Log (y)'),
+                    html.Div(id='graph2table', children=dash_table.DataTable(
                     columns=[{"name": i, "id": i} for i in ['Category', 'correlation', 'p-value']]
+                ))
+                    
+                ]
+            )
+        ],
+        className='mt-3'
+    )
+    
+    graph3 = html.Div(
+        [
+            
+            # Graph 1
+            html.Hr(),
+            html.B("User-selected property vs Production Process"),
+            dbc.Row(
+                [
+
+                    dbc.Col(
+                        dcc.Dropdown(
+                            graph1_y_dropdown, 
+                            'Conductivity (MSm-1)', 
+                            multi=False, 
+                            placeholder='Pick Y-axis', 
+                            id='graph3-yaxis-dropdown'
+                        ),
+                        md=3,
+                        sm=6
+                    ),
+                    dbc.Col(
+                        dcc.Checklist(
+                            ['Log Y', 'Squash', 'Show Benchmarks'], 
+                            ['Log Y', 'Show Benchmarks'], 
+                            id='graph3-log',
+                            inline=True,
+                            inputStyle={'margin-right': '5px'},
+                            labelStyle={'margin-right': '10px'}
+                        ),
+                        md=6,
+                        sm=7,
+                        className='pt-2'
+                    )
+                ],
+                className='mb-2'
+            ),
+            
+            dbc.Row([
+                dbc.Col(
+                    id='graph3', 
+                    children=dcc.Graph()
+                )
+            ]),
+            
+            html.Div(
+                id='graph3table', 
+                children=dash_table.DataTable(
+                    columns=[{"name": i, "id": i} for i in ['X-axis', 'mean', 'max']]
                 )
             )
+        ],
+        className='mt-3'
+    )
+    
+    search_bar = dcc.Dropdown(
+        df['Reference'].unique(), 
+        [], 
+        multi=True, 
+        placeholder='Search papers', 
+        id='search-bar'
+    )
+    
+    link = html.A('here', href='https://idlewildtech.com/contact/')
+    contact = html.Div(
+        children=[
+            'Don\'t see your paper? Contact us ', 
+            link,
+            ' to request an addition.'
+        ],
+        className='mt-3'
+    )
+    
+    find_your_paper = html.Div(
+        [
+            html.Hr(),
+            html.B("Search for your paper"),
+            search_bar,
+            contact
+        ],
+        className='mt-3'
+    )
+    
+    download = html.Div(
+        [
+            
+            html.Hr(),
+            html.B("Download data"),
+            
+            dcc.Dropdown(
+                [
+                    'Entire database - original', 
+                    'Entire database - latest', 
+                    'Filtered data'
+                ], 
+                [], 
+                multi=False, 
+                placeholder='Select data', 
+                id='download-dropdown'
+            ),
+            dbc.Button('Download', id='download-button', className='mt-2'),
+            dcc.Download(id="download-data"),
         ],
         className='mt-3'
     )
@@ -566,6 +657,9 @@ def serve_content(df, dd):
         children=[
             graph1,
             graph2,
+            graph3,
+            find_your_paper,
+            download
             # todo: credit
             # html.Div(
             #     id='credit',
@@ -638,9 +732,9 @@ layout = serve_layout
     [State("sidebar", "className")],
 )
 def toggle_classname(n, classname):
-    if n and classname == "":
-        return "collapsed"
-    return ""
+    if n and classname == "collapsed":
+        return ""
+    return "collapsed"
 
 
 @dash.callback(
@@ -744,18 +838,18 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
-@dash.callback(
-    Output("search-modal", "is_open"),
-    [
-        Input("open-search", "n_clicks"), 
-        Input("close-search", "n_clicks")
-    ],
-    [State("search-modal", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
+# @dash.callback(
+#     Output("search-modal", "is_open"),
+#     [
+#         Input("open-search", "n_clicks"), 
+#         Input("close-search", "n_clicks")
+#     ],
+#     [State("search-modal", "is_open")],
+# )
+# def toggle_modal(n1, n2, is_open):
+#     if n1 or n2:
+#         return not is_open
+#     return is_open
 
 
 def build_graphtable(df, x, y, squash):
@@ -828,12 +922,13 @@ def build_graph2table(df, x, y, squash):
         Output('graph1', 'children'),
         Output('graph1table', 'children'),
         Output('graph2', 'children'),
-        Output('graph2table', 'children')
+        Output('graph2table', 'children'),
+        Output('graph3', 'children'),
+        Output('graph3table', 'children')
     ],
     # Input('update', 'n_clicks'),
     
     # Graph 1
-    Input('graph1-xaxis-dropdown', 'value'),
     Input('graph1-yaxis-dropdown', 'value'), 
     Input('graph1-log', 'value'),
     
@@ -841,6 +936,9 @@ def build_graph2table(df, x, y, squash):
     Input('graph2-xaxis-dropdown', 'value'), 
     Input('graph2-yaxis-dropdown', 'value'),
     Input('graph2-log', 'value'),
+    
+    Input('graph3-yaxis-dropdown', 'value'),
+    Input('graph3-log', 'value'),
     
     # Common
     Input('legend', 'value'), 
@@ -858,7 +956,6 @@ def update_charts(
     # n_clicks,
     
     # G1
-    g1x,
     g1y, 
     g1log,
     
@@ -866,6 +963,9 @@ def update_charts(
     g2x,
     g2y,
     g2log,
+    
+    g3y,
+    g3log,
     
     # Common
     legend, 
@@ -896,7 +996,7 @@ def update_charts(
     bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g1y)
     fig1 = construct_fig1(
         df[mask], 
-        g1x, 
+        'Category', 
         g1y, 
         'Log Y' in g1log,
         squash='Squash' in g1log,
@@ -916,7 +1016,7 @@ def update_charts(
     
     graph1table = build_graphtable(
         df=df[mask],
-        x=g1x,
+        x='Category',
         y=g1y,
         squash='Squash' in g1log
     )
@@ -927,12 +1027,31 @@ def update_charts(
         y=g2y,
         squash='Squash' in g2log
     )
+    
+    bm = None if 'Show Benchmarks' not in g3log else compute_bm_g1(df, g3y)
+    m = df.Category == 'Aligned Few-wall CNTs'
+    fig3 = construct_fig1(
+        df[mask & m],
+        'Production Process', 
+        g3y, 
+        'Log Y' in g3log,
+        squash='Squash' in g3log,
+        bm=bm
+    )
+    graph3table = build_graphtable(
+        df=df[mask & m],
+        x='Production Process',
+        y=g3y,
+        squash='Squash' in g3log
+    )
             
     return [
         dcc.Graph(figure=fig1),
         graph1table,
         dcc.Graph(figure=fig2),
-        graph2table
+        graph2table,
+        dcc.Graph(figure=fig3),
+        graph3table
     ]
 
 @dash.callback(
@@ -948,3 +1067,55 @@ def toggle_filter_controls(apply_filters):
         return [False]*3
     else:
         return [True]*3
+    
+@dash.callback(
+    Output("download-data", "data"),
+    Input("download-button", "n_clicks"),
+    State('legend', 'value'), 
+    State('dope-control', 'value'),
+    State('filters-switch', 'on'),
+    State({'type': 'filter-control', 'column': ALL}, 'value'),
+    State({'type': 'filter-control', 'column': ALL}, 'id'),
+    State({'type': 'filter-null', 'column': ALL}, 'value'),
+    State('df', 'data'),
+    State('dd', 'data'),
+    State('download-dropdown', 'value'),
+    prevent_initial_call=True,
+)
+def func(
+    n_clicks, 
+    legend, 
+    dope,
+    apply_filters,
+    ctrl_values,
+    ctrl_idx,
+    null_values,
+    df, 
+    dd,
+    dl_type
+):
+    df = pd.DataFrame.from_dict(df)
+    
+    if dl_type == 'Filtered data':
+    
+        mask = get_filter_mask(
+            legend, 
+            dope, 
+            df, dd,
+            ctrl_values, 
+            ctrl_idx, 
+            null_values,
+            apply_filters
+        )
+
+        ts = int(time.time())
+        return dcc.send_data_frame(df[mask].to_csv, f"database_filtered_{ts}.csv")
+    
+    elif dl_type == 'Entire database - original':
+        df = get_df('original')
+        ts = int(time.time())
+        return dcc.send_data_frame(df.to_csv, f"database_original_{ts}.csv")
+
+    elif dl_type == 'Entire database - latest':
+        ts = int(time.time())
+        return dcc.send_data_frame(df.to_csv, f"database_latest_{ts}.csv")
