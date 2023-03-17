@@ -1,102 +1,38 @@
-import psycopg2
-import psycopg2.extras as extras
-
 import pandas as pd
-
-import os
 from dotenv import load_dotenv
+import os
+
 load_dotenv()
 
-DATABASE_URL = os.environ['DATABASE_URL']
+AWS_ACCESS_KEY = os.environ['AWS_ACCESS_KEY']
+AWS_SECRET = os.environ['AWS_SECRET']
 
-def get_conn():
-    return psycopg2.connect(**psycopg2.extensions.parse_dsn(DATABASE_URL))
 
-def get_dd():
-    conn = get_conn()
-    
-    with conn, conn.cursor() as cur:
-            cur.execute('select * from dd;')
-            dd = pd.DataFrame(cur.fetchall(), columns=['colname', 'coltype'])
-            dd = {r['colname']:r['coltype'] for i,r in dd.iterrows()}
-            
-    conn.close()
-    
-    return dd
-
-def get_df(original=None):
-    conn = get_conn()
-    
-    tbl_name = 'df' if not original else 'df_original'
-    
-    with conn, conn.cursor() as cur:
-        # get df column names
-        cur.execute(f"""
-        SELECT column_name
-          FROM information_schema.columns
-         WHERE table_schema = 'public'
-           AND table_name   = '{tbl_name}'
-             ;
-        """)
-        cols = [x[0] for x in cur.fetchall()]
-
-        cur.execute(f'select * from {tbl_name};')
-        df = pd.DataFrame(cur.fetchall(), columns=cols)
-        
-    conn.close()
+def read_from_s3(bucket, filename, access_key=AWS_ACCESS_KEY, secret=AWS_SECRET):
+    pth = f"s3://{bucket}/{filename}"
+    print(pth)
+    df = pd.read_csv(
+        pth,
+        storage_options={
+            "key": access_key,
+            "secret": secret
+        }
+    )
 
     return df
 
-def update_database(df, dd):
-    """
-    
-    Given a pandas DataFrame and a dd representing 
-    column types, load/update the database.
-    
-    """
-    
-    # fail if not all columns have types
-    assert set(df.columns).issubset(set(dd.keys()))
-    
-    conn = get_conn()
-    
-    with conn, conn.cursor() as cur:
+def get_dd():
+    return read_from_s3('meta.idlewildtech.com', 'data/dd.csv').set_index('colname').to_dict()['coltype']
 
-        print('dropping tables')
-        # drop tables
-        for table_name in ['df', 'dd']:
-            cur.execute(f"DROP TABLE IF EXISTS {table_name};")
+def get_df():
+    df = read_from_s3('meta.idlewildtech.com', 'data/df_latest.csv')
+    dd = get_dd()
 
-        print('recreating dd')
-        # create and insert into dd
-        cur.execute("""
-            CREATE TABLE dd(
-                colname text PRIMARY KEY,
-                coltype text NOT NULL
-            );
-        """)
-        print('inserting into dd')
-        qstring = "INSERT INTO dd VALUES %s"
-        extras.execute_values(cur, qstring, [(k,v) for k,v in dd.items()])
+    for c in df:
+        if dd[c] == 'numeric':
+            df[c] = pd.to_numeric(df[c], errors='coerce')
 
-        print('recreating df')
-        # create df
-        colnames = df.columns
-        qstring = """CREATE TABLE df("""
-        to_join = []
-        for c in colnames:
-            to_join.append(f""""{c}" {'numeric' if dd[c] == 'numeric' else 'text'}""")
-        qstring += ',\n'.join(to_join)
-        qstring += ");"
-        cur.execute(qstring)
+    return df
 
-        print('inserting into df')
-        # insert into df
-        qstring = "INSERT INTO df VALUES %s"
-        records = []
-        for i,r in df.iterrows():
-            records.append(tuple(r.values))
-        extras.execute_values(cur, qstring, records)
-        
-    conn.close()
-    
+
+

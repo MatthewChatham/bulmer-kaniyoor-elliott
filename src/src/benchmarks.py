@@ -12,14 +12,23 @@ def compute_bm_g1(df, y):
         'SCG': None,
         'Steel': None
     }
-    
+
+
     res['Copper'] = df.loc[df.Notes == 'Copper', y].mean()
+    print('got copper')
     res['Iron'] = df.loc[df.Notes == 'Iron', y].mean()
+    print('got iron')
     mask = df.Notes == 'Single Crystal Graphite'
+    print('got mask')
+    df.loc[mask].to_csv('/Users/mac/Downloads/tmp.csv')
+    print(df.loc[mask, y].tolist())
     res['SCG'] = df.loc[mask, y].mean()
+    print('got scg')
     
     mask = df.Notes.fillna('').str.contains('steel', case=False)
+    print('got mask again')
     res['Steel'] = df.loc[mask, y].mean()
+    print('got steel')
     
     return res
 

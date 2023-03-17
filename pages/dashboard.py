@@ -21,7 +21,7 @@ import time
 
 # Common
 from src.common import CATEGORY_MAPPER
-from src.db import get_conn, get_dd, get_df
+from src.db import get_dd, get_df
 from src.plotting import MARKERS, construct_fig1, construct_fig2
 from src.benchmarks import (compute_bm_g1, compute_bm_g2)
 from src.filters import generate_filter_control, get_filter_mask
@@ -327,6 +327,8 @@ def serve_sidebar(df):
         n_clicks=0, 
         style={'margin-right': '5px'}
     )
+
+    print(df.columns)
     
     search_bar = dcc.Dropdown(
         df['Reference'].unique(), 
@@ -990,6 +992,8 @@ def update_charts(
 ):
         
     df = pd.DataFrame.from_dict(df)
+
+    print('Got df')
     
     mask = get_filter_mask(
         legend, 
@@ -1000,8 +1004,11 @@ def update_charts(
         null_values,
         apply_filters
     )
+
+    print('got mask')
     
     bm = None if 'Show Benchmarks' not in g1log else compute_bm_g1(df, g1y)
+    print('got bm')
     fig1 = construct_fig1(
         df[mask], 
         'Category', 
@@ -1010,6 +1017,8 @@ def update_charts(
         squash='Squash' in g1log,
         bm=bm
     )
+
+    print('got fig1')
 
     bm = None if 'Show Benchmarks' not in g2log else compute_bm_g2(df, g2x, g2y)
     fig2 = construct_fig2(
