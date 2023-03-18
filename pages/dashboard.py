@@ -21,7 +21,7 @@ import time
 
 # Common
 from src.common import CATEGORY_MAPPER
-from src.db import get_dd, get_df
+from src.db import get_dd, get_df, get_df_for_download
 from src.plotting import MARKERS, construct_fig1, construct_fig2
 from src.benchmarks import (compute_bm_g1, compute_bm_g2)
 from src.filters import generate_filter_control, get_filter_mask
@@ -1129,7 +1129,7 @@ def func(
         return dcc.send_data_frame(df[mask].to_csv, f"database_filtered_{ts}.csv")
     
     elif dl_type == 'Entire database - original':
-        df = get_df('original')
+        df = get_df_for_download('original')
         ts = int(time.time())
         return dcc.send_data_frame(df.to_csv, f"database_original_{ts}.csv")
 

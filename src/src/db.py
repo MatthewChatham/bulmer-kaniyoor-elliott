@@ -34,5 +34,6 @@ def get_df():
 
     return df
 
-
-
+def get_df_for_download(file):
+    if file == 'original':
+        return read_from_s3('meta.idlewildtech.com', 'data/df_original.csv')
