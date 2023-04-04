@@ -26,7 +26,7 @@ from src.plotting import MARKERS, construct_fig1, construct_fig2
 from src.benchmarks import (compute_bm_g1, compute_bm_g2)
 from src.filters import generate_filter_control, get_filter_mask
 
-dash.register_page(__name__, path='/')
+dash.register_page(__name__, path='/', title='CNT Meta-Analysis')
 
 
 # -------------------------- CONSTANTS & STYLE --------------------------------
@@ -36,9 +36,7 @@ dash.register_page(__name__, path='/')
 
 
 CITATION = """
-Bulmer, J. S., Kaniyoor, A., Elliott 2008432, J. A., A Meta-Analysis
-of Conductive and Strong Carbon Nanotube Materials. Adv. Mater. 2021, 33,
-2008432.
+Dashboard database from J. Bulmer, A. Kaniyoor, J. Elliott, "A Meta-Analysis of Conductive and Strong Carbon Nanotube Materials". Adv. Mater. 2021, 33, 2008432.
 """
 CITELINK = "https://doi.org/10.1002/adma.202008432"
 
@@ -105,7 +103,7 @@ def serve_sidebar(df):
         [
             dbc.Col(
                 [
-                    html.H2("CNT Explorer", className="display-7"),
+                    html.H2("Advanced Carbon Conductor Explorer", className="display-7"),
                 ]
             ),
             dbc.Col(
@@ -132,7 +130,10 @@ def serve_sidebar(df):
                             "border-color": "rgba(0,0,0,.1)",
                         },
                         id="sidebar-toggle",
-                    )
+                    ),
+                    html.P('Dashboard', style={'font-size':'10px', 'margin-top': '5px'}),
+                    html.P('Control', style={'font-size':'10px', 'margin-top': '-15px'})
+
                 ],
                 # the column containing the toggle will be only as wide as the
                 # toggle, resulting in the toggle being right aligned
@@ -206,8 +207,8 @@ def serve_sidebar(df):
         'Specific Strength (N/Tex)',
         'Young\'s Modulus (GPa)',
         'Thermal Conductivity (W/(m K))',
-        'Probe separation for Ampacity (microns)',
-        'Effective diameter for ampacity (nm)',
+        # 'Probe separation for Ampacity (microns)',
+        # 'Effective diameter for ampacity (nm)',
         'Uber Parameter',
         'Specific Uber Parameter',
         'Plottable CNT Diameter (nm)',
@@ -309,6 +310,7 @@ def serve_sidebar(df):
     
     doped = [
         html.H5('Doping'),
+        html.P('Doped data points are solid markers.'),
         dcc.Checklist(
             [
                 {'label': 'Doped', 'value': 'Yes'},
@@ -440,7 +442,7 @@ def serve_content(df, dd):
         [
             
             # Graph 1
-            html.B("Selectable material property vs carbon category"),
+            html.H5("Selectable Material Property vs. Carbon Category"),
             dbc.Row(
                 [
 
@@ -485,14 +487,15 @@ def serve_content(df, dd):
                     columns=[{"name": i, "id": i} for i in ['X-axis', 'mean', 'max']]
                 )
             )
-        ]
+        ],
+        style={'margin-top': '25px'}
     )
     
 
     graph2 = html.Div(
         [
             html.Hr(),
-            html.B("Selectable material property vs Selectable material property"),
+            html.H5("Selectable Material Property vs. Selectable Material Property"),
             dbc.Row(
                 [
                     dbc.Col(
@@ -548,7 +551,7 @@ def serve_content(df, dd):
                 ]
             )
         ],
-        className='mt-3'
+        style={'margin-top':'25px'}
     )
     
     graph3 = html.Div(
@@ -556,7 +559,7 @@ def serve_content(df, dd):
             
             # Graph 1
             html.Hr(),
-            html.B("User-selected property vs Production Process"),
+            html.H5("User-Selected Property vs. Production Process (For FWCNTs)"),
             dbc.Row(
                 [
 
@@ -626,7 +629,7 @@ def serve_content(df, dd):
     find_your_paper = html.Div(
         [
             html.Hr(),
-            html.B("Search for your paper"),
+            html.H5("Search For Your Paper"),
             search_bar,
             contact
         ],
@@ -637,7 +640,7 @@ def serve_content(df, dd):
         [
             
             html.Hr(),
-            html.B("Download data"),
+            html.H5("Download Data"),
             
             dcc.Dropdown(
                 [
@@ -656,10 +659,13 @@ def serve_content(df, dd):
         className='mt-3'
     )
 
+    title = html.H2("Dashboard for Meta-Analysis on Advanced Carbon Conductors", className="display-7")
+
 
     content = html.Div(
         id="page-content",
         children=[
+            title,
             graph1,
             graph2,
             graph3,
