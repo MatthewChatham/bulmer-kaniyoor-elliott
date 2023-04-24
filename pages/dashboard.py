@@ -559,7 +559,7 @@ def serve_content(df, dd):
             
             # Graph 1
             html.Hr(),
-            html.H5("User-Selected Property vs. Production Process (For FWCNTs)"),
+            html.H5("User-Selected Property vs. Production Process (For Aligned FWCNTs)"),
             dbc.Row(
                 [
 
@@ -659,7 +659,7 @@ def serve_content(df, dd):
         className='mt-3'
     )
 
-    title = html.H2("Dashboard for Meta-Analysis on Advanced Carbon Conductors", className="display-7")
+    title = html.H2("Advanced Carbon Conductor Dashboard", className="display-7")
 
 
     content = html.Div(
